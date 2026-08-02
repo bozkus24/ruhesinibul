@@ -1,0 +1,26 @@
+# Kriterin — statik site (build adımı yok, dosyalar kök dizinde)
+[build]
+  publish = "."
+  command = ""
+
+# Güvenlik başlıkları (tüm sayfalar)
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# Service worker asla uzun süre cache'lenmesin (güncellemeler anında gelsin)
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Web app manifest doğru MIME tipiyle sunulsun
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=3600"
