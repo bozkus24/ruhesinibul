@@ -17,6 +17,12 @@
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#e0405f" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Kriterin" />
 <style>:root{
   --bg:#f6f3f1; --surface:#fff; --surface-2:#faf7f6;
   --ink:#231a20; --muted:#8a7f87; --line:#e8e0e1;
@@ -98,6 +104,7 @@ footer a:hover{color:var(--accent)}
 <script>try{var t=localStorage.getItem('kriterin_tema');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "Türkiye'de boy dağılımı: Uzun sayılmak için kaç santim gerekiyor?", "name": "Türkiye'de boy dağılımı: Uzun sayılmak için kaç santim gerekiyor?", "description": "Türkiye'de erkek ve kadın boy ortalamaları, yüzdelik dilimler ve 180 cm'in gerçekte ne kadar nadir olduğu. Normal dağılımla hesaplanmış tablolar.", "inLanguage": "tr-TR", "image": "https://kriterin.com/og.png", "mainEntityOfPage": {"@type": "WebPage", "@id": "https://kriterin.com/turkiyede-boy-dagilimi.html"}, "publisher": {"@type": "Organization", "name": "Kriterin", "url": "https://kriterin.com/", "logo": {"@type": "ImageObject", "url": "https://kriterin.com/favicon-192.png"}}, "author": {"@type": "Organization", "name": "Kriterin", "url": "https://kriterin.com/"}, "datePublished": "2026-07-31", "dateModified": "2026-07-31"}</script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7993571496408496" crossorigin="anonymous"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Ana Sayfa","item":"https://kriterin.com/"},{"@type":"ListItem","position":2,"name":"Yazılar","item":"https://kriterin.com/yazilar.html"},{"@type":"ListItem","position":3,"name":"Türkiye'de boy dağılımı","item":"https://kriterin.com/turkiyede-boy-dagilimi.html"}]}</script>
 </head>
 <body>
 <div class="nav"><div class="nav-in">
@@ -109,6 +116,7 @@ footer a:hover{color:var(--accent)}
   <button class="theme-btn" id="themeBtn" type="button" title="Temayı değiştir" aria-label="Temayı değiştir">◐</button>
 </div></div>
 <div class="wrap">
+<nav class="crumb" aria-label="İçerik yolu" style="font-size:13px;color:var(--muted);margin:2px 0 14px"><a href="/" style="color:var(--muted);text-decoration:none">Ana sayfa</a> › <a href="/yazilar.html" style="color:var(--muted);text-decoration:none">Yazılar</a> › <span>Türkiye'de boy dağılımı</span></nav>
 <h1>Türkiye'de boy dağılımı: Uzun sayılmak için kaç santim gerekiyor?</h1>
 <p class="lede">180 cm bir erkek için gerçekten uzun mu? 170 cm bir kadın için ne anlama geliyor? Sayılara bakalım.</p>
 <p class="meta">Okuma süresi ~6 dakika · Güncelleme: 31 Temmuz 2026</p>
@@ -177,6 +185,14 @@ footer a:hover{color:var(--accent)}
 </ul>
 
 <a class="cta" href="/">Boy kriterini kendin dene →</a>
+<section class="related" id="related" aria-label="İlgili yazılar" style="margin-top:34px">
+  <h2 style="margin-top:0">İlgili yazılar</h2>
+  <div class="cards">
+    <a class="card" href="/goz-ve-sac-rengi.html"><b>Göz ve saç rengi dağılımı: Mavi göz gerçekten nadir mi?</b><span>Göz rengi, saç rengi ve saç şekli oranları; bu özelliklerin birbiriyle olan istatistiksel bağlantısı.</span></a>
+    <a class="card" href="/kriterler-neden-imkansiz.html"><b>Kriterleriniz neden matematiksel olarak imkânsıza yakın?</b><span>Beş makul kriter, koca bir ülkeyi bir sınıf mevcuduna indirebilir. Olasılıkların çarpılması ve kriter enflasyonu.</span></a>
+    <a class="card" href="/yasa-gore-evlilik-oranlari.html"><b>Yaşa göre evlilik oranları</b><span>Bekâr kalma ihtimali kaç yaşında düşüyor? Kadın ve erkek arasındaki makas ve ileri yaşta açılan fark.</span></a>
+  </div>
+</section>
 <footer>
   <div style="margin-bottom:10px">
     <a href="/">Hesaplayıcı</a><a href="/yazilar.html">Yazılar</a><a href="/hakkimizda.html">Hakkımızda</a>
@@ -197,5 +213,6 @@ footer a:hover{color:var(--accent)}
   });
 })();
 </script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}</script>
 </body>
 </html>

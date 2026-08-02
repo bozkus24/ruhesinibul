@@ -1,0 +1,20 @@
+{
+  "name": "Kriterin — Aradığın kriterlere kaç kişi uyuyor?",
+  "short_name": "Kriterin",
+  "description": "Aradığın kriterlere Türkiye'de kaç kişi uyuyor? Resmî nüfus ve demografi verilerine dayalı tahmin.",
+  "lang": "tr-TR",
+  "dir": "ltr",
+  "start_url": "/?utm_source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f6f3f1",
+  "theme_color": "#e0405f",
+  "categories": ["entertainment", "lifestyle", "utilities"],
+  "icons": [
+    { "src": "/favicon-96.png", "sizes": "96x96", "type": "image/png" },
+    { "src": "/favicon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/favicon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
