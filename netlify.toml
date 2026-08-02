@@ -2,6 +2,9 @@
 [build]
   publish = "."
   command = ""
+  # Sadece belge/yazı (*.md) değişmişse deploy'u atla — boşa deploy kredisi yakma.
+  # Son deploy edilen commit ile şimdiki commit arasında site dosyası değişmediyse iptal eder.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':(exclude)*.md'"
 
 # Güvenlik başlıkları (tüm sayfalar)
 [[headers]]
@@ -12,15 +15,34 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
 
-# Service worker asla uzun süre cache'lenmesin (güncellemeler anında gelsin)
+# Görseller (favicon, og.png vb.) uzun süre önbelleklensin — tekrar indirilmesin.
+# Değişirlerse yeni ad ver (ör. og-v2.png) ya da bu süreyi düşür.
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/favicon.ico"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# CSS orta vadeli önbellek (güncelleme esnekliği için 1 hafta)
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+# Service worker: saatte bir kontrol (her gezinmede yeniden indirilmesin ama
+# güncellemeler ~1 saatte yayılsın). Kredi/istek tasarrufu için no-cache yerine.
 [[headers]]
   for = "/sw.js"
   [headers.values]
-    Cache-Control = "public, max-age=0, must-revalidate"
+    Cache-Control = "public, max-age=3600"
 
-# Web app manifest doğru MIME tipiyle sunulsun
+# Web app manifest doğru MIME tipiyle, 1 gün önbellekle
 [[headers]]
   for = "/manifest.webmanifest"
   [headers.values]
     Content-Type = "application/manifest+json"
-    Cache-Control = "public, max-age=3600"
+    Cache-Control = "public, max-age=86400"
