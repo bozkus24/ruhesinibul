@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="tr" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IQ dağılımı nasıl okunur? Yüzdelik dilimlerle anlamak · Kriterin</title>
+<meta name="description" content="IQ puanları normal dağılıma uyar. Ortalamanın birkaç puan kayması neden bu kadar çok kişiyi etkiler? Yüzdelik dilimler ve uç değerlerle açıklama." />
+<link rel="canonical" href="https://kriterin.com/iq-dagilimi-nasil-okunur.html" />
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="Kriterin" />
+<meta property="og:locale" content="tr_TR" />
+<meta property="og:url" content="https://kriterin.com/iq-dagilimi-nasil-okunur.html" />
+<meta property="og:title" content="IQ dağılımı nasıl okunur? Yüzdelik dilimlerle anlamak" />
+<meta property="og:description" content="IQ puanları normal dağılıma uyar. Ortalamanın birkaç puan kayması neden bu kadar çok kişiyi etkiler? Yüzdelik dilimler ve uç değerlerle açıklama." />
+<meta property="og:image" content="https://kriterin.com/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>:root{
+  --bg:#f6f3f1; --surface:#fff; --surface-2:#faf7f6;
+  --ink:#231a20; --muted:#8a7f87; --line:#e8e0e1;
+  --accent:#e0405f; --accent-soft:#fbe6ea;
+  --data:#1f9c92; --data-soft:#e2f2f0;
+  --shadow:0 1px 2px rgba(35,26,32,.05), 0 12px 30px -18px rgba(35,26,32,.28);
+  --radius:14px;
+  --font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:clamp(18px,3.5vw,40px)}
+
+/* Üst menü */
+.nav{border-bottom:1px solid var(--line);background:var(--surface)}
+.nav-in{max-width:760px;margin:0 auto;padding:16px clamp(18px,3.5vw,40px);display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.nav-logo{display:flex;align-items:center;gap:8px;font-weight:800;color:var(--accent);text-decoration:none;letter-spacing:-.01em;font-size:16px}
+.nav-logo img{width:26px;height:26px}
+.nav a.lnk{color:var(--muted);text-decoration:none;font-size:14px;font-weight:600}
+.nav a.lnk:hover{color:var(--accent)}
+.nav .sp{flex:1}
+
+h1{font-size:clamp(26px,4.4vw,38px);line-height:1.15;letter-spacing:-.02em;font-weight:800;margin:6px 0 10px;text-wrap:balance}
+h2{font-size:clamp(19px,2.6vw,23px);letter-spacing:-.01em;font-weight:800;margin:34px 0 10px}
+h3{font-size:16.5px;font-weight:700;margin:24px 0 8px}
+p,li{font-size:16px;color:#3a2f37}
+.lede{font-size:17.5px;color:var(--muted);margin:0 0 8px}
+.meta{font-size:13px;color:var(--muted);margin:0 0 26px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+a{color:var(--accent)}
+ul,ol{padding-left:22px}
+li{margin:6px 0}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px;display:block;overflow-x:auto}
+th,td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left}
+th{font-weight:700;background:var(--surface-2);white-space:nowrap}
+td:not(:first-child),th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.note{background:var(--data-soft);border-radius:11px;padding:14px 16px;margin:22px 0;font-size:15px}
+.cta{display:block;background:var(--accent);color:#fff;text-align:center;text-decoration:none;font-weight:800;
+  padding:15px 18px;border-radius:12px;margin:32px 0 8px;font-size:16.5px}
+.cta:hover{filter:brightness(1.07)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin:22px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 17px;
+  text-decoration:none;color:inherit;box-shadow:var(--shadow);display:block}
+.card:hover{border-color:var(--accent)}
+.card b{display:block;font-size:16px;margin-bottom:5px;letter-spacing:-.01em}
+.card span{font-size:14px;color:var(--muted);line-height:1.5}
+footer{margin-top:40px;padding:20px 0 10px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+footer a{color:var(--muted);text-decoration:none;margin-right:14px}
+footer a:hover{color:var(--accent)}
+:root[data-theme="dark"]{--bg:#151016;--surface:#1e1720;--surface-2:#241c26;--ink:#f2eaef;--muted:#9a8f98;
+  --line:#332a33;--accent:#ff6a82;--accent-soft:#3a2028;--data:#3fc3b5;--data-soft:#173029}
+:root[data-theme="dark"] p,:root[data-theme="dark"] li{color:#d8ccd4}
+
+.theme-btn{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:15px;display:grid;place-items:center;
+  font-family:inherit;padding:0}
+.theme-btn:hover{border-color:var(--accent)}
+.theme-btn:focus-visible{outline:2px solid var(--data);outline-offset:2px}
+
+/* Dar ekranda üst bar tek satırda kalsın */
+@media (max-width:560px){
+  .nav-in{padding:12px 16px;gap:8px 14px}
+  .nav-logo{font-size:15.5px;gap:7px}
+  .nav-logo img{width:23px;height:23px}
+  .nav a.lnk{font-size:13px}
+  .nav a.home{display:none}   /* logo zaten hesaplayıcıya gidiyor */
+  .theme-btn{width:30px;height:30px;font-size:14px}
+}
+
+/* Çok dar ekran: logo yazısı gizlenir, bar asla sarmaz, tema düğmesi sağda sabit kalır */
+@media (max-width:400px){
+  .nav-in{flex-wrap:nowrap;gap:12px;padding:12px 14px}
+  .nav-logo .wm{display:none}
+  .nav-logo img{width:26px;height:26px}
+  .nav a.lnk{white-space:nowrap;font-size:13px}
+  .theme-btn{margin-left:auto}
+}
+</style>
+<script>try{var t=localStorage.getItem('kriterin_tema');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "IQ dağılımı nasıl okunur? Yüzdelik dilimlerle anlamak", "name": "IQ dağılımı nasıl okunur? Yüzdelik dilimlerle anlamak", "description": "IQ puanları normal dağılıma uyar. Ortalamanın birkaç puan kayması neden bu kadar çok kişiyi etkiler? Yüzdelik dilimler ve uç değerlerle açıklama.", "inLanguage": "tr-TR", "image": "https://kriterin.com/og.png", "mainEntityOfPage": {"@type": "WebPage", "@id": "https://kriterin.com/iq-dagilimi-nasil-okunur.html"}, "publisher": {"@type": "Organization", "name": "Kriterin", "url": "https://kriterin.com/", "logo": {"@type": "ImageObject", "url": "https://kriterin.com/favicon-192.png"}}, "author": {"@type": "Organization", "name": "Kriterin", "url": "https://kriterin.com/"}, "datePublished": "2026-07-31", "dateModified": "2026-07-31"}</script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7993571496408496" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="nav"><div class="nav-in">
+  <a class="nav-logo" href="/"><img src="/favicon-96.png" alt=""><span class="wm">Kriterin</span></a>
+  <span class="sp"></span>
+  <a class="lnk home" href="/">Hesaplayıcı</a>
+  <a class="lnk" href="/yazilar.html">Yazılar</a>
+  <a class="lnk" href="/hakkimizda.html">Hakkımızda</a>
+  <button class="theme-btn" id="themeBtn" type="button" title="Temayı değiştir" aria-label="Temayı değiştir">◐</button>
+</div></div>
+<div class="wrap">
+<h1>IQ dağılımı nasıl okunur? Yüzdelik dilimlerle anlamak</h1>
+<p class="lede">Ortalamanın altı puan aşağı kayması, "90 altı" grubunu %25'ten %39'a çıkarıyor. Sebebi çan eğrisinin şekli.</p>
+<p class="meta">Okuma süresi ~6 dakika · Güncelleme: 31 Temmuz 2026</p>
+
+<p>IQ puanları, boy gibi, <b>normal dağılıma</b> uyar — ortada yığılan, iki uca doğru hızla incelen bir çan eğrisi. Bu dağılımın nasıl okunacağını bilmek, tek bir sayının ne anlama geldiğini anlamaktan çok daha faydalıdır.</p>
+
+<h2>Ölçek nasıl kurulmuş?</h2>
+<p>IQ testleri mutlak bir şey ölçmez; <b>göreli</b> bir konum verir. Uluslararası ölçekte ortalama 100 olacak şekilde ayarlanır ve standart sapma 15 alınır. Yani puanın kendisi değil, ortalamadan kaç standart sapma uzakta olduğu anlam taşır.</p>
+<p>Bu ayar sayesinde şu tablo her zaman geçerlidir:</p>
+<table>
+<thead><tr><th>Aralık</th><th>Nüfus içindeki payı</th></tr></thead>
+<tbody>
+<tr><td>Ortalamanın ±1 standart sapması</td><td>%68</td></tr>
+<tr><td>Ortalamanın ±2 standart sapması</td><td>%95</td></tr>
+<tr><td>Ortalamanın ±3 standart sapması</td><td>%99,7</td></tr>
+</tbody>
+</table>
+<p>Yani insanların üçte ikisi ortalamadan 15 puandan az uzakta. Uçlar ise çok hızlı seyrekleşir.</p>
+
+<h2>Ortalamanın küçük kayması neden büyük fark yaratır?</h2>
+<p>Kriterin'de Türkiye ortalaması 94 alınmıştır. Uluslararası ölçeğe göre altı puanlık bir kayma. Kulağa küçük geliyor ama sonucu şaşırtıcı:</p>
+<table>
+<thead><tr><th>Ölçek</th><th>90 ve altında kalanlar</th></tr></thead>
+<tbody>
+<tr><td>Ortalama 100 (uluslararası)</td><td>%25,2</td></tr>
+<tr><td>Ortalama 94 (Türkiye)</td><td>%39,3</td></tr>
+</tbody>
+</table>
+<div class="note">Altı puanlık kayma, bir eşiğin altında kalan nüfusu <b>%56 artırıyor</b>. Sebep çan eğrisinin şekli: ortalamanın hemen çevresi en kalabalık bölgedir, dolayısıyla eşiği o yoğun bölgeye doğru kaydırmak çok sayıda insanı taraf değiştirtir.</div>
+<p>Bu, dağılımlarla ilgili genel bir derstir: <b>ortalamadaki küçük değişimler, eşik yakınındaki kişi sayısında büyük değişimlere yol açar.</b> Aynı mantık boy, gelir ve sınav puanları için de geçerlidir.</p>
+
+<h2>Türkiye ölçeğinde dilimler</h2>
+<p>Ortalama 94, standart sapma yaklaşık 15 varsayımıyla:</p>
+<table>
+<thead><tr><th>Aralık</th><th>Oran</th><th>Yaklaşık kişi</th></tr></thead>
+<tbody>
+<tr><td>70 ve altı</td><td>%5,2</td><td>3.334.000</td></tr>
+<tr><td>85 ve altı</td><td>%27,1</td><td>17.376.000</td></tr>
+<tr><td>90 ve altı</td><td>%39,3</td><td>25.230.000</td></tr>
+<tr><td>90–110 arası</td><td>%46,8</td><td>30.054.000</td></tr>
+<tr><td>110 ve üstü</td><td>%13,9</td><td>8.916.000</td></tr>
+<tr><td>130 ve üstü</td><td>%0,7</td><td>479.000</td></tr>
+</tbody>
+</table>
+<p>Dikkat çeken nokta: <b>130 ve üstü yalnızca %0,7</b>. Yani her 143 kişiden biri. Bir partner kriteri olarak "çok zeki olsun" demek, bu ölçekte havuzu 143'te bire indirmek anlamına gelir.</p>
+
+<h2>Uçlarda ne oluyor?</h2>
+<p>Normal dağılımın en sezgiye aykırı özelliği uçların hızıdır. Her 15 puanlık adım, kalan grubu kabaca dörtte bire indirir:</p>
+<ul>
+<li>110 üstü: %13,9</li>
+<li>125 üstü: yaklaşık %2,3</li>
+<li>140 üstü: yaklaşık %0,1</li>
+</ul>
+<p>Bu yüzden "biraz üstü" ile "çok üstü" arasındaki fark, sayı olarak devasadır. 110 ile 130 arasında sadece 20 puan var ama kişi sayısı yirmi kat azalıyor.</p>
+
+<h2>Erkek–kadın farkı: ortalama değil, yayılım</h2>
+<p>Araştırmaların ortak bulgusu, ortalamaların pratikte eşit olduğu yönünde. Fark ortalamada değil <b>yayılımda</b>: erkeklerde dağılım biraz daha geniştir, yani hem üst hem alt uçta erkek oranı bir miktar yüksek çıkar.</p>
+<p>Kriterin bu farkı ılımlı bir düzeyde modeller. Sonuç olarak 130 üstünde erkek oranı kadınların yaklaşık 1,7 katıdır — ama aynı asimetri 85 altında da görülür. Geniş dağılımın iki ucu birden şişer; bu bir üstünlük değil, bir yayılım farkıdır.</p>
+
+<h2>Bu sayılar ne kadar güvenilir?</h2>
+<p>Dürüst olmak gerekirse: ülke ortalaması tahminleri tartışmalıdır. Farklı çalışmalar farklı yöntemler kullanır, örneklem seçimi sonucu belirgin biçimde etkiler ve eğitim düzeyi, beslenme, test aşinalığı gibi etkenler ölçüme karışır.</p>
+<p>Bu yüzden buradaki sayıları <b>bir ölçek fikri</b> olarak okumak doğru olur. Dağılımın şekli ve dilimler arası oranlar sağlamdır; ortalamanın tam olarak 94 mü 96 mı olduğu ise tartışmaya açıktır.</p>
+
+<h2>Özet</h2>
+<ul>
+<li>IQ mutlak değil göreli bir ölçektir; ortalama 100, standart sapma 15 olacak şekilde ayarlanır.</li>
+<li>Ortalamanın 6 puan kayması, 90 altındaki nüfusu %25'ten %39'a çıkarır.</li>
+<li>Türkiye ölçeğinde 130 ve üstü %0,7 — her 143 kişiden biri.</li>
+<li>Her 15 puanlık adım kalan grubu kabaca dörtte bire indirir.</li>
+<li>Cinsiyet farkı ortalamada değil yayılımdadır ve iki ucu birden etkiler.</li>
+</ul>
+
+<a class="cta" href="/">IQ aralığını dene →</a>
+<footer>
+  <div style="margin-bottom:10px">
+    <a href="/">Hesaplayıcı</a><a href="/yazilar.html">Yazılar</a><a href="/hakkimizda.html">Hakkımızda</a>
+    <a href="/gizlilik-politikasi.html">Gizlilik</a><a href="/cerez-politikasi.html">Çerezler</a>
+    <a href="/kullanim-kosullari.html">Kullanım Koşulları</a><a href="/#cerez">Çerez tercihleri</a>
+  </div>
+  <div>İletişim ve iş birliği: <a href="mailto:kriterincom@gmail.com" style="color:var(--accent)">kriterincom@gmail.com</a></div>
+  <div style="margin-top:8px">© 2026 Kriterin · Sonuçlar tahminidir, eğlence ve fikir verme amaçlıdır.</div>
+</footer>
+</div>
+<script>
+(function(){
+  var r=document.documentElement, b=document.getElementById('themeBtn');
+  b.addEventListener('click',function(){
+    var next = r.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+    r.setAttribute('data-theme',next);
+    try{localStorage.setItem('kriterin_tema',next);}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>
