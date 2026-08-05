@@ -6,6 +6,11 @@
   # Son deploy edilen commit ile şimdiki commit arasında site dosyası değişmediyse iptal eder.
   ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':(exclude)*.md'"
 
+# Anket paylaşım önizlemesi: ?id'li linklerde başlık anket ismiyle değişir
+[[edge_functions]]
+  path = "/anket.html"
+  function = "anket-og"
+
 # Güvenlik başlıkları (tüm sayfalar)
 [[headers]]
   for = "/*"
