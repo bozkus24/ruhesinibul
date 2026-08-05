@@ -87,6 +87,10 @@ h1{margin:6px 0 6px;font-size:clamp(23px,5vw,32px);letter-spacing:-.02em;line-he
 .lb-row.me{background:var(--accent-soft);border-radius:10px;padding-left:8px;padding-right:8px}
 .lb-row.top1 .lb-rank{color:#e0a020}
 .mini{font-size:12px;color:var(--muted)}
+.trash{border:1px solid var(--line);background:var(--surface);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;padding:0}
+.trash svg{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.trash:hover{border-color:var(--accent)}
+.trash:hover svg{stroke:var(--accent)}
 .rdet{border-top:1px solid var(--line)}
 .rdet:first-child{border-top:none}
 .rdet summary{display:flex;align-items:center;gap:11px;padding:11px 4px;cursor:pointer;list-style:none}
@@ -211,10 +215,23 @@ const Store=(function(){
       if(ready&&!id.startsWith("loc_")){
         const {doc,getDoc}=fs;
         const s=await getDoc(doc(db,"surveys",id));
-        return s.exists()?s.data():null;
+        if(!s.exists())return null;
+        const d=s.data();
+        return d.deleted?null:d;
       }
       const d=lsGet("kriterin_anket_"+id);
       return d?{name:d.name,criteria:d.criteria,key:d.key}:null;
+    },
+    // Yumuşak silme: yalnızca gizli anahtarı bilen (kurucu) silebilir.
+    // Kural, delKey === key eşleşmesini ve sadece bu iki alanın değişmesini ister.
+    async deleteSurvey(id,key){
+      await initP;
+      if(ready&&!id.startsWith("loc_")){
+        const {doc,setDoc}=fs;
+        await setDoc(doc(db,"surveys",id),{deleted:true,delKey:key||""},{merge:true});
+        return;
+      }
+      try{localStorage.removeItem("kriterin_anket_"+id)}catch(e){}
     },
     async addResponse(id,resp){
       await initP;
@@ -285,6 +302,7 @@ const fmtScore=s=>{const n=Math.round(Number(s)*10)/10;return Number.isInteger(n
 /* ============ kurucunun anketleri (bu cihazda) ============ */
 function myList(){try{return JSON.parse(localStorage.getItem("kriterin_anket_mine")||"{}")}catch(e){return{}}}
 function mySave(id,key,name){try{const m=myList();m[id]={key:key||"",name:name||"",at:Date.now()};localStorage.setItem("kriterin_anket_mine",JSON.stringify(m))}catch(e){}}
+function myRemove(id){try{const m=myList();delete m[id];localStorage.setItem("kriterin_anket_mine",JSON.stringify(m))}catch(e){}}
 /* Paylaşım: kullanıcı istediği mecrayı seçer (X en başta), mesaj sabittir */
 const SHARE_MSG="Kriterlerime ne kadar uyuyorsun? Aşağıdaki linkten hemen test et. Sıralamadaki yerini al.";
 function shareMenu(url){
@@ -357,7 +375,7 @@ function renderCreate(){
   app.appendChild(h(`<div class="top">
     <div class="eyebrow">Anket oluşturucu</div>
     <h1>Kendi kriterlerinden anketini oluştur</h1>
-    <p class="lede">İstediğin kriterleri seç, her birine 1–5 önem ver. Link oluştur, arkadaşlarına at; sana ne kadar uyduklarını ve liderlik tablosunu görün.</p>
+    <p class="lede">İstediğin kriterleri seç, her birine 1 ile 5 arasında bir önem katsayısı ver. Link oluştur, arkadaşlarına at; sana ne kadar uyduklarını ve liderlik tablosunu görün.</p>
   </div>`));
 
   // Daha önce oluşturduğu anketler (bu cihazda / hesabında)
@@ -370,11 +388,23 @@ function renderCreate(){
       const m=mineAll[mid];
       const d=m.at?new Date(m.at):null;
       const ds=d?d.getDate()+"."+(d.getMonth()+1)+"."+d.getFullYear():"";
-      rowsEl.appendChild(h(`<a class="lb-row" style="text-decoration:none;color:inherit" href="?id=${esc(mid)}">
-        <span class="lb-name">${esc(m.name||"Anket")}</span>
-        <span class="mini">${esc(ds)}</span>
-        <span class="lb-score" style="font-size:13px">Sonuçlar →</span>
-      </a>`));
+      const row=h(`<div class="lb-row" style="gap:8px">
+        <a style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none;color:inherit" href="?id=${esc(mid)}">
+          <span class="lb-name">${esc(m.name||"Anket")}</span>
+          <span class="mini">${esc(ds)}</span>
+          <span class="lb-score" style="font-size:13px">Sonuçlar →</span>
+        </a>
+        <button type="button" class="trash" title="Anketi sil" aria-label="Anketi sil"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M6 7l1 12.2A2 2 0 0 0 9 21h6a2 2 0 0 0 2-1.8L18 7"/><path d="M10 11v6M14 11v6"/></svg></button>
+      </div>`);
+      row.querySelector(".trash").addEventListener("click",async function(){
+        if(!confirm(`"${m.name||"Anket"}" anketini silmek istediğine emin misin? Linki artık açılmaz, cevaplar erişilmez olur.`))return;
+        this.disabled=true;
+        try{ await Store.deleteSurvey(mid,m.key); }catch(e){} // kural yoksa yerelden yine kalkar
+        myRemove(mid);
+        row.remove();
+        if(!rowsEl.children.length)card.remove();
+      });
+      rowsEl.appendChild(row);
     });
     app.appendChild(card);
   }
