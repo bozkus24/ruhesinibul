@@ -498,7 +498,7 @@ input[type=text]:focus{border-color:var(--accent)}
       var html='';
       // Yalnızca ilk 100 gösterilir (katılımcı sayısı belirtilmez)
       var top=(list||[]).slice(0,100);
-      if(!top.length){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Henüz kimse yok — ilk sen ol!</p>'; }
+      if(!top.length){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Henüz kimse yok'+(curBoard==='streak'?' — ilk sen ol!':'')+'</p>'; }
       else{
         top.forEach(function(r,i){
           var you = user && r.uid===user.uid;
@@ -507,7 +507,7 @@ input[type=text]:focus{border-color:var(--accent)}
         });
         body.innerHTML='<div class="lbscroll">'+html+'</div>';
       }
-      note.textContent = curBoard==='streak' ? 'En uzun seriye göre sıralama.' : 'En az 10 gün oynayanlar arasında, ortalama tahmin sayısına göre (az = iyi). Eşitlikte daha kısa sürede bilen üstte.';
+      note.textContent = curBoard==='streak' ? '' : (top.length ? 'En az 10 gün oynayanlar arasında, ortalama tahmin sayısına göre (az = iyi). Eşitlikte daha kısa sürede bilen üstte.' : 'Liderlik tablosuna girebilmek için en az 10 gün oynamalısın.');
     }).catch(function(){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yüklenemedi.</p>'; });
   }
 
