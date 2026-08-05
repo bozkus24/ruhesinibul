@@ -282,6 +282,38 @@ const fmtScore=s=>{const n=Math.round(Number(s)*10)/10;return Number.isInteger(n
 /* ============ kurucunun anketleri (bu cihazda) ============ */
 function myList(){try{return JSON.parse(localStorage.getItem("kriterin_anket_mine")||"{}")}catch(e){return{}}}
 function mySave(id,key,name){try{const m=myList();m[id]={key:key||"",name:name||"",at:Date.now()};localStorage.setItem("kriterin_anket_mine",JSON.stringify(m))}catch(e){}}
+/* Paylaşım: kullanıcı istediği mecrayı seçer (X en başta), mesaj sabittir */
+const SHARE_MSG="Kriterlerime ne kadar uyuyorsun? Aşağıdaki linkten hemen test et. Sıralamadaki yerini al.";
+function shareMenu(url){
+  const full=SHARE_MSG+"\n"+url, enc=encodeURIComponent;
+  const wrap=h(`<div>
+    <button type="button" class="btn data" data-toggle>Paylaş</button>
+    <div class="opts" data-menu style="display:none;margin-top:10px;justify-content:center">
+      <button type="button" class="opt" data-net="x">X (Twitter)</button>
+      <button type="button" class="opt" data-net="wa">WhatsApp</button>
+      <button type="button" class="opt" data-net="tg">Telegram</button>
+      <button type="button" class="opt" data-net="fb">Facebook</button>
+      <button type="button" class="opt" data-net="copy">Kopyala</button>
+      <button type="button" class="opt" data-net="os" hidden>Diğer…</button>
+    </div>
+  </div>`);
+  const menu=wrap.querySelector("[data-menu]");
+  if(navigator.share)wrap.querySelector('[data-net="os"]').hidden=false;
+  wrap.querySelector("[data-toggle]").addEventListener("click",()=>{
+    menu.style.display=menu.style.display==="none"?"flex":"none";
+  });
+  wrap.querySelectorAll("[data-net]").forEach(b=>b.addEventListener("click",()=>{
+    const n=b.dataset.net;
+    if(n==="x")window.open("https://twitter.com/intent/tweet?text="+enc(full),"_blank");
+    else if(n==="wa")window.open("https://wa.me/?text="+enc(full),"_blank");
+    else if(n==="tg")window.open("https://t.me/share/url?url="+enc(url)+"&text="+enc(SHARE_MSG),"_blank");
+    else if(n==="fb")window.open("https://www.facebook.com/sharer/sharer.php?u="+enc(url)+"&quote="+enc(SHARE_MSG),"_blank");
+    else if(n==="copy"){navigator.clipboard&&navigator.clipboard.writeText(full);b.textContent="Kopyalandı ✓";}
+    else if(n==="os"&&navigator.share)navigator.share({text:SHARE_MSG,url:url}).catch(()=>{});
+  }));
+  return wrap;
+}
+
 function answerLabel(c,v){
   if(c.type==="range")return String(v)+(c.unit||"");
   const o=(c.options||[]).find(o=>o.v===v);
@@ -422,20 +454,15 @@ function renderCreate(){
         <input class="inp" id="shareUrl" readonly value="${esc(url)}">
         <button class="btn sec" id="copyBtn" style="width:auto;padding:11px 16px">Kopyala</button>
       </div>
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="btn sec" id="waBtn" style="flex:1">WhatsApp'ta paylaş</button>
-        <a class="btn data" style="flex:1;text-decoration:none" href="${esc(url)}">Sonuçlarını gör →</a>
-      </div>
+      <div data-share style="margin-top:12px"></div>
+      <a class="btn sec" style="text-decoration:none;margin-top:8px" href="${esc(url)}">Sonuçlarını gör →</a>
       <p class="hint" style="margin:10px 0 0">Sonuçlarda kim katıldı, kaç aldı, ne cevap verdi — hepsini görürsün. Kurucu olarak bu cihazda otomatik tanınırsın; Google girişliysen diğer cihazlarında da.</p>
     </div>`));
     linkOut.querySelector("#copyBtn").addEventListener("click",function(){
       const i=linkOut.querySelector("#shareUrl"); i.select();
       navigator.clipboard&&navigator.clipboard.writeText(i.value); this.textContent="Kopyalandı ✓";
     });
-    linkOut.querySelector("#waBtn").addEventListener("click",()=>{
-      const t=encodeURIComponent(`${name} — kriterlerime ne kadar uyuyorsun? 👀\n`+url);
-      window.open("https://wa.me/?text="+t,"_blank");
-    });
+    linkOut.querySelector("[data-share]").appendChild(shareMenu(url));
     linkOut.scrollIntoView({behavior:"smooth",block:"start"});
   }
 }
@@ -737,6 +764,7 @@ async function renderResults(id,k){
     <div class="subtle" style="margin-top:0">Anket linkin — arkadaşlarına at</div>
     <div class="linkbox"><input class="inp" id="shareUrl" readonly value="${esc(shareUrl)}">
     <button class="btn sec" id="copyBtn" style="width:auto;padding:11px 16px">Kopyala</button></div>
+    <div data-share style="margin-top:12px"></div>
     <p class="hint" style="margin:8px 0 0">Arkadaşların bu linkte anketi cevaplar; sen açınca burası (sonuçlar) açılır. <a href="${esc(shareUrl+"&katil=1")}">Ankete kendin de katılmak istersen →</a></p>
   </div>`);
   app.appendChild(shareCard);
@@ -744,6 +772,7 @@ async function renderResults(id,k){
     const i=shareCard.querySelector("#shareUrl"); i.select();
     navigator.clipboard&&navigator.clipboard.writeText(i.value); this.textContent="Kopyalandı ✓";
   });
+  shareCard.querySelector("[data-share]").appendChild(shareMenu(shareUrl));
 
   const board=h(`<div class="card">
     <div style="display:flex;align-items:center;gap:10px">
