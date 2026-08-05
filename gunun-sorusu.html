@@ -86,7 +86,8 @@ input[type=text]:focus{border-color:var(--accent)}
 .src{font-size:12px;color:var(--muted);margin-top:4px}
 .foot{color:var(--muted);font-size:13px;text-align:center;margin-top:8px}
 .mini{color:var(--muted);font-size:12.5px;text-align:center;margin-top:26px}
-.stats .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:10px;margin-bottom:16px}
+.stats .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+@media(max-width:560px){.stats .tiles{grid-template-columns:repeat(2,1fr)}.stats .tiles .tile:last-child:nth-child(odd){grid-column:1 / -1}}
 .tile{background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:12px 6px;text-align:center}
 .tile b{display:block;font-size:22px;font-weight:800;letter-spacing:-.02em}
 .tile span{font-size:11px;color:var(--muted);font-weight:600}
@@ -109,6 +110,9 @@ input[type=text]:focus{border-color:var(--accent)}
 .tab{flex:1;border:1px solid var(--line);background:var(--surface-2);color:var(--muted);border-radius:10px;padding:9px;font:inherit;font-weight:700;font-size:13px;cursor:pointer}
 .tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .row{display:flex;align-items:center;gap:12px;padding:10px 6px;border-bottom:1px solid var(--line)}
+.lbscroll{max-height:396px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.lbscroll::-webkit-scrollbar{width:8px}.lbscroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+.lbscroll .row:last-child{border-bottom:none}
 .row:last-child{border-bottom:0}
 .rank{width:26px;text-align:center;font-weight:800;color:var(--muted);font-size:15px;flex:none}
 .rank.top{color:var(--accent)}
@@ -163,10 +167,9 @@ input[type=text]:focus{border-color:var(--accent)}
         <div class="msg" id="endMsg"></div>
         <div class="reveal" id="revealBox"></div>
         <div class="inrow">
-          <button class="btn" id="shareBtn">Sonucu paylaş</button>
-          <button class="btn ghost" id="copyBtn">Linki kopyala</button>
+          <button class="btn" id="shareBtn" style="width:100%">Sonucu paylaş</button>
         </div>
-        <p class="foot">Yarın yeni bir soru olacak — serini bozma.</p>
+        <p class="foot">Yarın yeni bir soru olacak, serini bozma!</p>
         <div class="foot" id="nextIn" style="font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;margin-top:2px"></div>
       </div>
     </div>
@@ -178,7 +181,7 @@ input[type=text]:focus{border-color:var(--accent)}
         <div class="tile"><b id="stCur">0</b><span>güncel seri</span></div>
         <div class="tile"><b id="stBest">0</b><span>en uzun seri</span></div>
         <div class="tile"><b id="stRate">0%</b><span>çözüm oranı</span></div>
-        <div class="tile"><b id="stAvg">—</b><span>ort. tahmin</span></div>
+        <div class="tile"><b id="stAvg">—</b><span>ortalama tahmin</span></div>
       </div>
       <div class="gridcal" id="gridCal"></div>
       <div class="callbl">Dolu kareler o gün oynadığınızı gösterir · koyu = daha az tahminde bildiniz · kesikli = bilemediniz</div>
@@ -410,9 +413,6 @@ input[type=text]:focus{border-color:var(--accent)}
     if(navigator.share){navigator.share({text:shareText()}).catch(function(){});}
     else if(navigator.clipboard){navigator.clipboard.writeText(shareText());alert('Sonuç kopyalandı!');}
   });
-  document.getElementById('copyBtn').addEventListener('click',function(){
-    if(navigator.clipboard){navigator.clipboard.writeText("https://kriterin.com/gunun-sorusu.html");alert('Link kopyalandı!');}
-  });
 
   if(nick){showGame();}else{document.getElementById('nickInput').focus();}
 
@@ -496,13 +496,17 @@ input[type=text]:focus{border-color:var(--accent)}
     body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Yükleniyor…</p>';
     KB.board(curBoard).then(function(list){
       var html='';
-      if(!list||!list.length){ html='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Henüz kimse yok — ilk sen ol!</p>'; }
-      (list||[]).forEach(function(r,i){
-        var you = user && r.uid===user.uid;
-        var val = curBoard==='streak' ? (r.bestStreak+' <small>gün</small>') : (((''+r.avgTries).replace('.',','))+' <small>ort. tahmin</small>');
-        html+='<div class="row'+(you?' you':'')+'"><div class="rank'+(i<3?' top':'')+'">'+(i+1)+'</div><div class="rav">'+esc((r.name||'—').charAt(0).toUpperCase())+'</div><div class="rname">'+esc(r.name||'—')+'</div><div class="rval">'+val+'</div></div>';
-      });
-      body.innerHTML=html;
+      // Yalnızca ilk 100 gösterilir (katılımcı sayısı belirtilmez)
+      var top=(list||[]).slice(0,100);
+      if(!top.length){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Henüz kimse yok — ilk sen ol!</p>'; }
+      else{
+        top.forEach(function(r,i){
+          var you = user && r.uid===user.uid;
+          var val = curBoard==='streak' ? (r.bestStreak+' <small>gün</small>') : (((''+r.avgTries).replace('.',','))+' <small>ort. tahmin</small>');
+          html+='<div class="row'+(you?' you':'')+'"><div class="rank'+(i<3?' top':'')+'">'+(i+1)+'</div><div class="rav">'+esc((r.name||'—').charAt(0).toUpperCase())+'</div><div class="rname">'+esc(r.name||'—')+'</div><div class="rval">'+val+'</div></div>';
+        });
+        body.innerHTML='<div class="lbscroll">'+html+'</div>';
+      }
       note.textContent = curBoard==='streak' ? 'En uzun seriye göre sıralama.' : 'En az 10 gün oynayanlar arasında, ortalama tahmin sayısına göre (az = iyi). Eşitlikte daha kısa sürede bilen üstte.';
     }).catch(function(){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yüklenemedi.</p>'; });
   }
@@ -557,8 +561,8 @@ input[type=text]:focus{border-color:var(--accent)}
       board: async (type) => {
         const col = collection(db,'players');
         const q = (type==='tries')
-          ? query(col, where('eligible','==',true), orderBy('avgTries','asc'), limit(20))
-          : query(col, orderBy('bestStreak','desc'), limit(20));
+          ? query(col, where('eligible','==',true), orderBy('avgTries','asc'), limit(100))
+          : query(col, orderBy('bestStreak','desc'), limit(100));
         const qs = await getDocs(q); const out = [];
         qs.forEach(dd => { const x = dd.data(); out.push({ uid: dd.id, name: x.name, bestStreak: x.bestStreak||0, avgTries: x.avgTries, avgSolveMs: x.avgSolveMs }); });
         // "En az tahmin"de eşit ortalamalar: daha kısa sürede bilen üstte (süre verisi olmayan sona)
