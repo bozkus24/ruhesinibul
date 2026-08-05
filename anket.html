@@ -78,6 +78,19 @@ h1{margin:6px 0 6px;font-size:clamp(23px,5vw,32px);letter-spacing:-.02em;line-he
 .lb-row.me{background:var(--accent-soft);border-radius:10px;padding-left:8px;padding-right:8px}
 .lb-row.top1 .lb-rank{color:#e0a020}
 .mini{font-size:12px;color:var(--muted)}
+.rdet{border-top:1px solid var(--line)}
+.rdet:first-child{border-top:none}
+.rdet summary{display:flex;align-items:center;gap:11px;padding:11px 4px;cursor:pointer;list-style:none}
+.rdet summary::-webkit-details-marker{display:none}
+.rdet summary .exp{color:var(--muted);font-size:11px;flex:0 0 auto}
+.rdet[open] summary .exp{transform:rotate(90deg)}
+.ansrows{padding:2px 6px 12px 37px}
+.ansrow{display:flex;align-items:baseline;gap:10px;font-size:13px;padding:6px 0;border-top:1px dashed var(--line)}
+.ansrow:first-child{border-top:none}
+.ansrow .at{color:var(--muted);flex:1;min-width:0}
+.ansrow .av2{font-weight:700;text-align:right}
+.ansrow .ap{font-weight:800;width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.ap.full{color:var(--data)}.ap.zero{color:var(--accent)}.ap.part{color:#e0a020}
 footer{border-top:1px solid var(--line);margin-top:30px;padding:20px 18px;color:var(--muted);font-size:12.5px;text-align:center}
 footer a{color:var(--muted);margin:0 7px;text-decoration:none}
 .center{text-align:center}
@@ -192,7 +205,7 @@ const Store=(function(){
         return s.exists()?s.data():null;
       }
       const d=lsGet("kriterin_anket_"+id);
-      return d?{name:d.name,criteria:d.criteria}:null;
+      return d?{name:d.name,criteria:d.criteria,key:d.key}:null;
     },
     async addResponse(id,resp){
       await initP;
@@ -260,10 +273,23 @@ function computeScore(survey,answers){
 // %82.7 gibi göster; tam sayıysa ondalıksız (%100)
 const fmtScore=s=>{const n=Math.round(Number(s)*10)/10;return Number.isInteger(n)?String(n):n.toFixed(1);};
 
+/* ============ kurucunun anketleri (bu cihazda) ============ */
+function myList(){try{return JSON.parse(localStorage.getItem("kriterin_anket_mine")||"{}")}catch(e){return{}}}
+function mySave(id,key,name){try{const m=myList();m[id]={key:key||"",name:name||"",at:Date.now()};localStorage.setItem("kriterin_anket_mine",JSON.stringify(m))}catch(e){}}
+function resultsUrl(id,key){return location.origin+location.pathname+"?id="+id+"&k="+encodeURIComponent(key||"");}
+function answerLabel(c,v){
+  if(c.type==="range")return String(v)+(c.unit||"");
+  const o=(c.options||[]).find(o=>o.v===v);
+  return o?o.l:String(v);
+}
+
 /* ============ ROUTER ============ */
 const params=new URLSearchParams(location.search);
 const surveyId=params.get("id");
-if(surveyId){ renderRespond(surveyId); } else { renderCreate(); }
+const adminKey=params.get("k");
+if(surveyId&&adminKey!==null){ renderResults(surveyId,adminKey); }
+else if(surveyId){ renderRespond(surveyId); }
+else { renderCreate(); }
 
 /* =========================================================
    OLUŞTUR MODU
@@ -348,8 +374,10 @@ function renderCreate(){
 
     submit.disabled=true; submit.innerHTML='<span class="spin" style="width:16px;height:16px;border-width:2px"></span> Oluşturuluyor…';
     try{
-      const id=await Store.createSurvey({name,criteria});
-      showLink(id,name);
+      const key=Math.random().toString(36).slice(2,12);
+      const id=await Store.createSurvey({name,criteria,key});
+      mySave(id,key,name);
+      showLink(id,name,key);
     }catch(e){
       submit.disabled=false; submit.textContent="Anketi oluştur ve link al";
       fail("Bir hata oldu, tekrar dene.");
@@ -359,9 +387,10 @@ function renderCreate(){
 
   function fail(m){ err.textContent=m; err.style.display="block"; err.scrollIntoView({behavior:"smooth",block:"center"}); }
 
-  function showLink(id,name){
+  function showLink(id,name,key){
     submit.style.display="none";
     const url=location.origin+location.pathname+"?id="+id;
+    const rUrl=resultsUrl(id,key);
     linkOut.innerHTML="";
     linkOut.appendChild(h(`<div class="card">
       ${id.startsWith("loc_")?`<div class="msg err">⚠️ Sunucuya bağlanılamadı — bu link yalnızca bu cihazda çalışır. Reklam engelleyici Firebase'i engelliyor olabilir; kapatıp tekrar dene.</div>`:""}
@@ -371,12 +400,22 @@ function renderCreate(){
         <button class="btn sec" id="copyBtn" style="width:auto;padding:11px 16px">Kopyala</button>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
-        <a class="btn data" style="text-decoration:none" href="${esc(url)}">Anketi aç →</a>
-        <button class="btn sec" id="waBtn" style="width:auto;padding:13px 16px">WhatsApp'ta paylaş</button>
+        <button class="btn sec" id="waBtn" style="flex:1">WhatsApp'ta paylaş</button>
       </div>
+      <div class="subtle" style="margin-top:16px">Sonuçlar linkin (sadece sende kalsın)</div>
+      <p class="hint" style="margin:2px 0 8px">Kim katıldı, kaç aldı, ne cevap verdi — hepsini bu linkte görürsün. Bu cihazda otomatik hatırlanır.</p>
+      <div class="linkbox" style="margin-top:0">
+        <input class="inp" id="resUrl" readonly value="${esc(rUrl)}">
+        <button class="btn sec" id="copyRes" style="width:auto;padding:11px 16px">Kopyala</button>
+      </div>
+      <a class="btn data" style="text-decoration:none;margin-top:12px" href="${esc(rUrl)}">Sonuçlar sayfanı aç →</a>
     </div>`));
     linkOut.querySelector("#copyBtn").addEventListener("click",function(){
       const i=linkOut.querySelector("#shareUrl"); i.select();
+      navigator.clipboard&&navigator.clipboard.writeText(i.value); this.textContent="Kopyalandı ✓";
+    });
+    linkOut.querySelector("#copyRes").addEventListener("click",function(){
+      const i=linkOut.querySelector("#resUrl"); i.select();
       navigator.clipboard&&navigator.clipboard.writeText(i.value); this.textContent="Kopyalandı ✓";
     });
     linkOut.querySelector("#waBtn").addEventListener("click",()=>{
@@ -517,6 +556,12 @@ async function renderRespond(id){
     <p class="lede"><b>${esc(survey.name)}</b> kendi kriterlerini belirledi. Kendi özelliklerini gir, uyumunu ve liderlik tablosunu gör.</p>
   </div>`));
 
+  // Anketi bu cihazda oluşturan kişiye sonuçlar kısayolu
+  const mine=myList()[id];
+  if(mine){
+    app.appendChild(h(`<a class="msg ok" style="display:block;text-decoration:none;font-weight:700" href="${esc(resultsUrl(id,mine.key))}">👑 Bu anket senin — katılımcıları, skorları ve cevapları gör →</a>`));
+  }
+
   if(done){ showResult(done.score,done.name,true); return; }
 
   // Google ile giriş yapmışsa (Günün Sorusu'ndan) takma ad sorulmaz, Google adı kullanılır
@@ -554,9 +599,12 @@ async function renderRespond(id){
     }
     if(!name){ err.textContent="Takma adını yaz."; err.style.display="block"; return; }
     const {score}=computeScore(survey,answers);
+    // Cevaplar da kaydedilir — kurucu sonuçlar sayfasında görebilsin
+    const cleanAns={};
+    for(const c of survey.criteria){ cleanAns[c.id]=String(answers[c.id]).slice(0,60); }
     submit.disabled=true; submit.innerHTML='<span class="spin" style="width:16px;height:16px;border-width:2px"></span>';
     try{
-      await Store.addResponse(id,{name,score});
+      await Store.addResponse(id,{name,score,answers:cleanAns});
     }catch(e){
       // Kayıt başarısız: sahte başarı gösterme — kullanıcı tekrar deneyebilsin
       submit.disabled=false; submit.textContent="Uyumumu hesapla";
@@ -643,6 +691,106 @@ async function renderRespond(id){
       app.insertBefore(h(`<div class="msg ok">Bu ankete daha önce katıldın — sonucun ve liderlik tablosu aşağıda.</div>`),res);
     }
   }
+}
+
+/* =========================================================
+   SONUÇLAR MODU (sadece kurucu — ?id=X&k=ANAHTAR)
+   Katılımcılar, skorları ve verdikleri cevaplar.
+========================================================= */
+async function renderResults(id,k){
+  app.innerHTML='<div class="center" style="padding:60px 0"><span class="spin"></span></div>';
+  let survey; try{ survey=await Store.getSurvey(id); }catch(e){ survey=null; }
+  if(!survey){
+    app.innerHTML=`<div class="top"><h1>Anket bulunamadı</h1><p class="lede">Bu link geçersiz ya da anket kaldırılmış olabilir.</p></div>
+      <a class="btn" style="text-decoration:none" href="/anket.html">Kendi anketini oluştur →</a>`;
+    return;
+  }
+  const mine=myList()[id];
+  const okKey=!survey.key || k===survey.key || (mine&&mine.key===survey.key);
+  if(!okKey){
+    app.innerHTML="";
+    app.appendChild(h(`<div class="top"><h1>Bu sayfa anketin sahibine özel</h1>
+      <p class="lede">Katılımcı listesi ve cevaplar yalnızca sonuçlar linkiyle görülür. Anketi sen oluşturduysan, oluştururken verilen "Sonuçlar linki"ni kullan.</p></div>`));
+    app.appendChild(h(`<a class="btn" style="text-decoration:none" href="${esc(location.origin+location.pathname+"?id="+id)}">Ankete katıl →</a>`));
+    return;
+  }
+  mySave(id,survey.key||"",survey.name);
+
+  app.innerHTML="";
+  const shareUrl=location.origin+location.pathname+"?id="+id;
+  app.appendChild(h(`<div class="top">
+    <div class="eyebrow">Sonuçlar · sadece sen görüyorsun</div>
+    <h1>${esc(survey.name)}</h1>
+    <p class="lede">Kim katıldı, yüzde kaç aldı, hangi cevabı verdi — hepsi burada. Bir katılımcıya dokununca cevapları açılır.</p>
+  </div>`));
+  const shareCard=h(`<div class="card">
+    <div class="subtle" style="margin-top:0">Katılım linki — arkadaşlarına at</div>
+    <div class="linkbox"><input class="inp" id="shareUrl" readonly value="${esc(shareUrl)}">
+    <button class="btn sec" id="copyBtn" style="width:auto;padding:11px 16px">Kopyala</button></div>
+  </div>`);
+  app.appendChild(shareCard);
+  shareCard.querySelector("#copyBtn").addEventListener("click",function(){
+    const i=shareCard.querySelector("#shareUrl"); i.select();
+    navigator.clipboard&&navigator.clipboard.writeText(i.value); this.textContent="Kopyalandı ✓";
+  });
+
+  const board=h(`<div class="card">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="subtle" style="margin:0;flex:1">Katılımcılar · <span data-count>—</span></div>
+      <button class="btn sec" data-refresh style="width:auto;padding:8px 14px;font-size:13px">Yenile</button>
+    </div>
+    <div data-rows style="margin-top:8px"></div>
+  </div>`);
+  app.appendChild(board);
+  const rowsEl=board.querySelector("[data-rows]"), countEl=board.querySelector("[data-count]");
+
+  function ptsMark(r){
+    const cls=r.pts===MAXPTS?"full":(r.pts>0?"part":"zero");
+    return `<span class="ap ${cls}">${r.pts}/5</span>`;
+  }
+  function paint(rows){
+    countEl.textContent=rows.length+" kişi";
+    rowsEl.innerHTML="";
+    if(!rows.length){
+      rowsEl.appendChild(h(`<p class="mini center" style="padding:14px 0">Henüz katılan yok. Katılım linkini paylaş! 🎉</p>`));
+      return;
+    }
+    rows.forEach((r,i)=>{
+      let inner;
+      if(r.answers){
+        const {brk}=computeScore(survey,r.answers);
+        inner=survey.criteria.map(c=>{
+          const b=brk.find(x=>x.id===c.id)||{pts:0};
+          return `<div class="ansrow"><span class="at">${esc(c.title)}</span><span class="av2">${esc(answerLabel(c,r.answers[c.id]))}</span>${ptsMark(b)}</div>`;
+        }).join("");
+      }else{
+        inner=`<p class="mini" style="padding:4px 0">Cevap detayı kaydedilmemiş (eski katılım).</p>`;
+      }
+      rowsEl.appendChild(h(`<details class="rdet">
+        <summary>
+          <span class="lb-rank">${i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1)}</span>
+          <span class="lb-name">${esc(r.name||"—")}</span>
+          <span class="lb-score">%${fmtScore(r.score)}</span>
+          <span class="exp">▶</span>
+        </summary>
+        <div class="ansrows">${inner}</div>
+      </details>`));
+    });
+  }
+  async function load(){
+    rowsEl.innerHTML='<div class="center" style="padding:22px 0"><span class="spin"></span></div>';
+    let rows=null; try{ rows=await Store.getLeaderboard(id); }catch(e){ rows=null; }
+    if(rows===null){
+      rowsEl.innerHTML="";
+      const retry=h(`<div><p class="mini center" style="padding:10px 0 6px">Katılımcılar yüklenemedi.</p><button class="btn sec" style="margin-bottom:4px">Tekrar dene</button></div>`);
+      retry.querySelector("button").addEventListener("click",load);
+      rowsEl.appendChild(retry); countEl.textContent="—";
+      return;
+    }
+    paint(rows);
+  }
+  board.querySelector("[data-refresh]").addEventListener("click",load);
+  await load();
 }
 </script>
 </body>
