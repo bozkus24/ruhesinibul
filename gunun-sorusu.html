@@ -86,7 +86,7 @@ input[type=text]:focus{border-color:var(--accent)}
 .src{font-size:12px;color:var(--muted);margin-top:4px}
 .foot{color:var(--muted);font-size:13px;text-align:center;margin-top:8px}
 .mini{color:var(--muted);font-size:12.5px;text-align:center;margin-top:26px}
-.stats .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stats .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:10px;margin-bottom:16px}
 .tile{background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:12px 6px;text-align:center}
 .tile b{display:block;font-size:22px;font-weight:800;letter-spacing:-.02em}
 .tile span{font-size:11px;color:var(--muted);font-weight:600}
@@ -125,10 +125,9 @@ input[type=text]:focus{border-color:var(--accent)}
   <span class="sp"></span>
   <a class="lnk" href="/hakkimizda.html">Hakkımızda</a>
   <a class="lnk" href="mailto:kriterincom@gmail.com">İletişim</a>
-  <button class="theme-btn" id="themeBtn" title="Temayı değiştir" aria-label="Temayı değiştir">◐</button>
 </div></div>
 
-<div class="wrap">
+<div class="wrap"><button class="theme-btn" id="themeBtn" type="button" title="Temayı değiştir" aria-label="Temayı değiştir" style="float:right;margin:2px 0 10px 12px">◐</button>
   <h1>Günün Sorusu</h1>
   <p class="date" id="dateLine"></p>
 
@@ -179,6 +178,7 @@ input[type=text]:focus{border-color:var(--accent)}
         <div class="tile"><b id="stCur">0</b><span>güncel seri</span></div>
         <div class="tile"><b id="stBest">0</b><span>en uzun seri</span></div>
         <div class="tile"><b id="stRate">0%</b><span>çözüm oranı</span></div>
+        <div class="tile"><b id="stAvg">—</b><span>ort. tahmin</span></div>
       </div>
       <div class="gridcal" id="gridCal"></div>
       <div class="callbl">Dolu kareler o gün oynadığınızı gösterir · koyu = daha az tahminde bildiniz · kesikli = bilemediniz</div>
@@ -204,7 +204,7 @@ input[type=text]:focus{border-color:var(--accent)}
 
   <div class="card" id="lbCard">
     <div class="q" style="font-size:16px;margin-bottom:12px">Liderlik Tablosu</div>
-    <div class="tabs"><button class="tab on" id="tabStreak">En uzun seri</button><button class="tab" id="tabTries">En az tahminde</button></div>
+    <div class="tabs"><button class="tab on" id="tabStreak">En uzun seri</button><button class="tab" id="tabTries">En az tahmin</button></div>
     <div id="lbBody"><p class="qhint" style="text-align:center;padding:10px 0;margin:0">Yükleniyor…</p></div>
     <p class="mini" id="lbNote" style="margin-top:14px"></p>
   </div>
@@ -268,7 +268,8 @@ input[type=text]:focus{border-color:var(--accent)}
 
   function loadState(){ try{return JSON.parse(get(LS.game))||{}}catch(e){return {}} }
   var state=loadState();
-  if(state.date!==todayKey) state={date:todayKey,guesses:[],done:false,solved:false};
+  if(state.date!==todayKey) state={date:todayKey,guesses:[],done:false,solved:false,startedAt:Date.now()};
+  else if(!state.startedAt && !state.done) state.startedAt=Date.now();
 
   function loadHistory(){try{return JSON.parse(get(LS.history))||{}}catch(e){return {}}}
   function saveHistory(h){set(LS.history,JSON.stringify(h))}
@@ -346,9 +347,10 @@ input[type=text]:focus{border-color:var(--accent)}
     card.classList.remove('hidden');
     var nums=keys.map(keyNum).sort(function(a,b){return a-b}), setN={};
     nums.forEach(function(n){setN[n]=1});
-    var total=keys.length, solvedCount=0;
-    keys.forEach(function(k){if(h[k].solved)solvedCount++;});
+    var total=keys.length, solvedCount=0, triesSum=0;
+    keys.forEach(function(k){if(h[k].solved){solvedCount++;triesSum+=(h[k].tries||5);}});
     var rate=Math.round(solvedCount/total*100);
+    var avg=solvedCount?(triesSum/solvedCount):null;
     var best=1,run=1,i;
     for(i=1;i<nums.length;i++){ if(nums[i]===nums[i-1]+1){run++;if(run>best)best=run;} else {run=1;} }
     var todayNum=Math.floor(now.getTime()/86400000), start=setN[todayNum]?todayNum:todayNum-1, cur=0,kk=start;
@@ -357,6 +359,7 @@ input[type=text]:focus{border-color:var(--accent)}
     document.getElementById('stCur').textContent=cur;
     document.getElementById('stBest').textContent=best;
     document.getElementById('stRate').textContent=rate+'%';
+    document.getElementById('stAvg').textContent=avg==null?'—':(Math.round(avg*10)/10).toString().replace('.',',');
     var sb=document.getElementById('streakBox'); if(sb) sb.textContent = cur>0 ? (cur+' günlük seri') : '';
     var g=document.getElementById('gridCal'); g.innerHTML='';
     var byNum={}; keys.forEach(function(k){byNum[keyNum(k)]=h[k]});
@@ -389,10 +392,10 @@ input[type=text]:focus{border-color:var(--accent)}
     if(isNaN(guess)){document.getElementById('guessInput').focus();return;}
     guess=Math.round(guess);
     state.guesses.push(guess);
-    if(guess===today.a){ state.solved=true; state.done=true; }
+    if(guess===today.a){ state.solved=true; state.done=true; state.solveMs=Math.max(0,Date.now()-(state.startedAt||Date.now())); }
     else if(state.guesses.length>=MAX){ state.done=true; }
     set(LS.game, JSON.stringify(state));
-    if(state.done){ var hh=loadHistory(); hh[todayKey]={solved:state.solved,tries:state.guesses.length}; saveHistory(hh); try{window.dispatchEvent(new CustomEvent('kb-done'))}catch(e){} }
+    if(state.done){ var hh=loadHistory(); hh[todayKey]={solved:state.solved,tries:state.guesses.length,ms:state.solveMs||0}; saveHistory(hh); try{window.dispatchEvent(new CustomEvent('kb-done'))}catch(e){} }
     document.getElementById('guessInput').value='';
     renderGame(); renderStats();
   });
@@ -479,7 +482,7 @@ input[type=text]:focus{border-color:var(--accent)}
   function syncIfDone(){
     try{ var s=JSON.parse(get(LSg)||'{}'); if(s.date===todayKey && s.done && user && window.KB&&KB.complete){
       var disp=myName||cleanName(user.name)||'Oyuncu';
-      KB.complete(disp, !!s.solved, (s.guesses?s.guesses.length:5), todayKey).then(loadBoards).catch(function(){});
+      KB.complete(disp, !!s.solved, (s.guesses?s.guesses.length:5), todayKey, (s.solved?(s.solveMs||0):0)).then(loadBoards).catch(function(){});
     }}catch(e){}
   }
   window.addEventListener('kb-done', syncIfDone);
@@ -500,7 +503,7 @@ input[type=text]:focus{border-color:var(--accent)}
         html+='<div class="row'+(you?' you':'')+'"><div class="rank'+(i<3?' top':'')+'">'+(i+1)+'</div><div class="rav">'+esc((r.name||'—').charAt(0).toUpperCase())+'</div><div class="rname">'+esc(r.name||'—')+'</div><div class="rval">'+val+'</div></div>';
       });
       body.innerHTML=html;
-      note.textContent = curBoard==='streak' ? 'En uzun seriye göre sıralama.' : 'En az 10 gün oynayanlar arasında, ortalama tahmin sayısına göre (az = iyi).';
+      note.textContent = curBoard==='streak' ? 'En uzun seriye göre sıralama.' : 'En az 10 gün oynayanlar arasında, ortalama tahmin sayısına göre (az = iyi). Eşitlikte daha kısa sürede bilen üstte.';
     }).catch(function(){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yüklenemedi.</p>'; });
   }
 
@@ -536,18 +539,19 @@ input[type=text]:focus{border-color:var(--accent)}
       signOut: () => signOut(auth),
       getMine: async () => { if(!cur) return null; const s = await getDoc(doc(db,'players',cur.uid)); return s.exists() ? s.data() : null; },
       setName: async (name) => { if(!cur) return; await setDoc(doc(db,'players',cur.uid), { name }, { merge:true }); },
-      complete: async (name, solved, tries, todayKey) => {
+      complete: async (name, solved, tries, todayKey, solveMs) => {
         if(!cur) return;
         const ref = doc(db,'players',cur.uid);
         const snap = await getDoc(ref);
-        const d = snap.exists() ? snap.data() : { streak:0, bestStreak:0, totalDays:0, solvedCount:0, totalTries:0, lastDate:'' };
+        const d = snap.exists() ? snap.data() : { streak:0, bestStreak:0, totalDays:0, solvedCount:0, totalTries:0, solveMsSum:0, lastDate:'' };
         if(d.lastDate === todayKey){ await setDoc(ref, { name }, { merge:true }); return; }
         const streak = (d.lastDate === keyOffset(todayKey,-1)) ? (d.streak||0)+1 : 1;
         const solvedCount = (d.solvedCount||0) + (solved?1:0);
         const totalTries = (d.totalTries||0) + (solved?tries:0);
+        const solveMsSum = (d.solveMsSum||0) + (solved?(solveMs||0):0);
         const totalDays = (d.totalDays||0)+1;
-        const payload = { name, streak, bestStreak: Math.max(d.bestStreak||0, streak), totalDays, solvedCount, totalTries, lastDate: todayKey, eligible: totalDays>=10, updatedAt: serverTimestamp() };
-        if(solvedCount>0) payload.avgTries = Math.round(totalTries/solvedCount*100)/100;
+        const payload = { name, streak, bestStreak: Math.max(d.bestStreak||0, streak), totalDays, solvedCount, totalTries, solveMsSum, lastDate: todayKey, eligible: totalDays>=10, updatedAt: serverTimestamp() };
+        if(solvedCount>0){ payload.avgTries = Math.round(totalTries/solvedCount*100)/100; payload.avgSolveMs = Math.round(solveMsSum/solvedCount); }
         await setDoc(ref, payload, { merge:true });
       },
       board: async (type) => {
@@ -556,7 +560,9 @@ input[type=text]:focus{border-color:var(--accent)}
           ? query(col, where('eligible','==',true), orderBy('avgTries','asc'), limit(20))
           : query(col, orderBy('bestStreak','desc'), limit(20));
         const qs = await getDocs(q); const out = [];
-        qs.forEach(dd => { const x = dd.data(); out.push({ uid: dd.id, name: x.name, bestStreak: x.bestStreak||0, avgTries: x.avgTries }); });
+        qs.forEach(dd => { const x = dd.data(); out.push({ uid: dd.id, name: x.name, bestStreak: x.bestStreak||0, avgTries: x.avgTries, avgSolveMs: x.avgSolveMs }); });
+        // "En az tahmin"de eşit ortalamalar: daha kısa sürede bilen üstte (süre verisi olmayan sona)
+        if(type==='tries') out.sort((a,b)=>{ const t=(a.avgTries||0)-(b.avgTries||0); if(t)return t; return (a.avgSolveMs==null?Infinity:a.avgSolveMs)-(b.avgSolveMs==null?Infinity:b.avgSolveMs); });
         return out;
       }
     };

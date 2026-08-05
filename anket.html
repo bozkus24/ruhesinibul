@@ -117,11 +117,13 @@ footer a{color:var(--muted);margin:0 7px;text-decoration:none}
   <span class="sp"></span>
   <a class="lnk" href="/hakkimizda.html">Hakkımızda</a>
   <a class="lnk" href="mailto:kriterincom@gmail.com">İletişim</a>
-  <button class="theme-btn" id="themeBtn" title="Temayı değiştir" aria-label="Temayı değiştir">◐</button>
 </div></nav>
 
-<main class="wrap" id="app">
+<main class="wrap">
+<button class="theme-btn" id="themeBtn" type="button" title="Temayı değiştir" aria-label="Temayı değiştir" style="float:right;margin:2px 0 10px 12px">◐</button>
+<div id="app">
   <div class="center" style="padding:60px 0"><span class="spin"></span></div>
+</div>
 </main>
 
 <footer>
@@ -310,17 +312,18 @@ function shareMenu(url){
   const wrap=h(`<div>
     <button type="button" class="btn data" data-toggle>Paylaş</button>
     <div class="opts" data-menu style="display:none;margin-top:10px;justify-content:center">
-      <button type="button" class="opt" data-net="x">X (Twitter)</button>
+      <button type="button" class="opt" data-net="x">X</button>
       <button type="button" class="opt" data-net="wa">WhatsApp</button>
       <button type="button" class="opt" data-net="tg">Telegram</button>
       <button type="button" class="opt" data-net="fb">Facebook</button>
       <button type="button" class="opt" data-net="copy">Kopyala</button>
-      <button type="button" class="opt" data-net="os" hidden>Diğer…</button>
     </div>
   </div>`);
   const menu=wrap.querySelector("[data-menu]");
-  if(navigator.share)wrap.querySelector('[data-net="os"]').hidden=false;
   wrap.querySelector("[data-toggle]").addEventListener("click",()=>{
+    // Destekleyen cihazda (telefonlar) doğrudan sistemin uygulama menüsü açılır;
+    // alttaki seçenekler yalnızca desteklemeyen tarayıcılarda (masaüstü) yedektir.
+    if(navigator.share){ navigator.share({text:SHARE_MSG,url:url}).catch(()=>{}); return; }
     menu.style.display=menu.style.display==="none"?"flex":"none";
   });
   wrap.querySelectorAll("[data-net]").forEach(b=>b.addEventListener("click",()=>{
@@ -330,7 +333,6 @@ function shareMenu(url){
     else if(n==="tg")window.open("https://t.me/share/url?url="+enc(url)+"&text="+enc(SHARE_MSG),"_blank");
     else if(n==="fb")window.open("https://www.facebook.com/sharer/sharer.php?u="+enc(url)+"&quote="+enc(SHARE_MSG),"_blank");
     else if(n==="copy"){navigator.clipboard&&navigator.clipboard.writeText(full);b.textContent="Kopyalandı ✓";}
-    else if(n==="os"&&navigator.share)navigator.share({text:SHARE_MSG,url:url}).catch(()=>{});
   }));
   return wrap;
 }
@@ -343,8 +345,9 @@ function answerLabel(c,v){
 
 /* ============ ROUTER ============
    Tek link: aynı linki kurucu açarsa sonuçlar, diğerleri açarsa anket gelir.
+   Kurucu kendi anketine katılamaz; her zaman sonuçları görür.
    Kurucu; bu cihazdan (localStorage) ya da Google hesabından (owner) tanınır.
-   ?katil=1 → kurucu da ankete katılabilsin. ?k=ANAHTAR → eski sonuç linkleri. */
+   ?k=ANAHTAR → eski sonuç linkleri. */
 const params=new URLSearchParams(location.search);
 const surveyId=params.get("id");
 const adminKey=params.get("k");
@@ -353,17 +356,15 @@ else if(surveyId){ routeSurvey(surveyId); }
 else { renderCreate(); }
 
 async function routeSurvey(id){
-  if(!params.has("katil")){
-    const mine=myList()[id];
-    if(mine){ renderResults(id,mine.key||""); return; }
-    try{
-      const u=await Store.getUser();
-      if(u){
-        const s=await Store.getSurvey(id);
-        if(s&&s.owner&&s.owner===u.uid){ mySave(id,s.key||"",s.name); renderResults(id,s.key||""); return; }
-      }
-    }catch(e){}
-  }
+  const mine=myList()[id];
+  if(mine){ renderResults(id,mine.key||""); return; }
+  try{
+    const u=await Store.getUser();
+    if(u){
+      const s=await Store.getSurvey(id);
+      if(s&&s.owner&&s.owner===u.uid){ mySave(id,s.key||"",s.name); renderResults(id,s.key||""); return; }
+    }
+  }catch(e){}
   renderRespond(id);
 }
 
@@ -384,14 +385,14 @@ function renderCreate(){
   if(mineIds.length){
     const card=h(`<div class="card"><div class="subtle" style="margin-top:0">Önceki anketlerin</div><div data-rows></div></div>`);
     const rowsEl=card.querySelector("[data-rows]");
+    const z=n=>(n<10?"0":"")+n;
     mineIds.slice(0,10).forEach(mid=>{
       const m=mineAll[mid];
       const d=m.at?new Date(m.at):null;
-      const ds=d?d.getDate()+"."+(d.getMonth()+1)+"."+d.getFullYear():"";
-      const row=h(`<div class="lb-row" style="gap:8px">
-        <a style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none;color:inherit" href="?id=${esc(mid)}">
-          <span class="lb-name">${esc(m.name||"Anket")}</span>
-          <span class="mini">${esc(ds)}</span>
+      const ds=d?z(d.getDate())+"."+z(d.getMonth()+1)+"."+d.getFullYear():"";
+      const row=h(`<div class="lb-row" style="gap:8px;align-items:flex-start">
+        <a style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;text-decoration:none;color:inherit" href="?id=${esc(mid)}">
+          <span class="lb-name" style="white-space:normal">${esc(m.name||"Anket")}${ds?` <span class="mini">- ${esc(ds)}</span>`:""}</span>
           <span class="lb-score" style="font-size:13px">Sonuçlar →</span>
         </a>
         <button type="button" class="trash" title="Anketi sil" aria-label="Anketi sil"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M6 7l1 12.2A2 2 0 0 0 9 21h6a2 2 0 0 0 2-1.8L18 7"/><path d="M10 11v6M14 11v6"/></svg></button>
@@ -504,16 +505,11 @@ function renderCreate(){
       <div class="msg ok">✓ Anketin hazır! Tek link: arkadaşların açınca anket, sen açınca sonuçlar gelir.</div>
       <div class="linkbox">
         <input class="inp" id="shareUrl" readonly value="${esc(url)}">
-        <button class="btn sec" id="copyBtn" style="width:auto;padding:11px 16px">Kopyala</button>
       </div>
       <div data-share style="margin-top:12px"></div>
       <a class="btn sec" style="text-decoration:none;margin-top:8px" href="${esc(url)}">Sonuçlarını gör →</a>
       <p class="hint" style="margin:10px 0 0">Sonuçlarda kim katıldı, kaç aldı, ne cevap verdi — hepsini görürsün. Kurucu olarak bu cihazda otomatik tanınırsın; Google girişliysen diğer cihazlarında da.</p>
     </div>`));
-    linkOut.querySelector("#copyBtn").addEventListener("click",function(){
-      const i=linkOut.querySelector("#shareUrl"); i.select();
-      navigator.clipboard&&navigator.clipboard.writeText(i.value); this.textContent="Kopyalandı ✓";
-    });
     linkOut.querySelector("[data-share]").appendChild(shareMenu(url));
     linkOut.scrollIntoView({behavior:"smooth",block:"start"});
   }
@@ -557,8 +553,15 @@ function buildCritEditor(c,st){
       </div>
       <p class="hint">Aralık içi tam puan (5/5). Dışına çıktıkça her ${c.step}${esc(c.unit)||" yaş"} için 1 puan düşer.</p>
     </div>`);
+    const clampRange=el=>el.addEventListener("change",e=>{
+      const v=e.target.value; if(v==="")return;
+      let n=Math.round(Number(v)); if(isNaN(n))return;
+      n=Math.min(c.max,Math.max(c.min,n)); e.target.value=n;
+      if(e.target.id==="rmin")st.min=n; else st.max=n;
+    });
     rp.querySelector("#rmin").addEventListener("input",e=>st.min=e.target.value);
     rp.querySelector("#rmax").addEventListener("input",e=>st.max=e.target.value);
+    clampRange(rp.querySelector("#rmin")); clampRange(rp.querySelector("#rmax"));
     body.appendChild(rp);
   }else{
     const multi=(c.type==="multi"||c.type==="gender");
@@ -716,8 +719,15 @@ async function renderRespond(id){
     const body=el.querySelector("[data-body]");
     if(c.type==="range"){
       const lo=c.absMin!=null?c.absMin:c.min, hi=c.absMax!=null?c.absMax:c.max;
-      const inp=h(`<input class="inp" type="number" min="${lo}" max="${hi}" placeholder="Kendi ${esc(c.title.toLowerCase())} değerini yaz${esc(c.unit||"")}">`);
+      const inp=h(`<input class="inp" type="number" inputmode="numeric" min="${lo}" max="${hi}" placeholder="Kendi ${esc(c.title.toLowerCase())} değerini yaz${esc(c.unit||"")}">`);
       inp.addEventListener("input",e=>answers[c.id]=e.target.value);
+      // Sınır dışına çıkılırsa değeri kıstır (ör. yaş 18'in altına inemez)
+      inp.addEventListener("change",e=>{
+        const v=e.target.value; if(v==="")return;
+        let n=Math.round(Number(v)); if(isNaN(n))return;
+        n=Math.min(hi,Math.max(lo,n));
+        e.target.value=n; answers[c.id]=String(n);
+      });
       body.appendChild(inp);
     }else{
       const opts=h(`<div class="opts" style="margin-top:2px"></div>`);
@@ -817,7 +827,7 @@ async function renderResults(id,k){
     <div class="linkbox"><input class="inp" id="shareUrl" readonly value="${esc(shareUrl)}">
     <button class="btn sec" id="copyBtn" style="width:auto;padding:11px 16px">Kopyala</button></div>
     <div data-share style="margin-top:12px"></div>
-    <p class="hint" style="margin:8px 0 0">Arkadaşların bu linkte anketi cevaplar; sen açınca burası (sonuçlar) açılır. <a href="${esc(shareUrl+"&katil=1")}">Ankete kendin de katılmak istersen →</a></p>
+    <p class="hint" style="margin:8px 0 0">Arkadaşların bu linkte anketi cevaplar; sen tıkladığında sonuçları görürsün.</p>
   </div>`);
   app.appendChild(shareCard);
   shareCard.querySelector("#copyBtn").addEventListener("click",function(){
