@@ -89,9 +89,8 @@ footer a{color:var(--muted);margin:0 7px;text-decoration:none}
 <nav class="sitenav"><div class="sitenav-in">
   <a class="nb" href="/"><img src="/favicon-96.png" alt="" width="24" height="24"><span>Kriterin</span></a>
   <span class="sp"></span>
-  <a class="lnk" href="/hesaplayici.html">Hesaplayıcı</a>
-  <a class="lnk" href="/gunun-sorusu.html">Günün Sorusu</a>
-  <a class="lnk" href="/yazilar.html">Yazılar</a>
+  <a class="lnk" href="/hakkimizda.html">Hakkımızda</a>
+  <a class="lnk" href="mailto:kriterincom@gmail.com">İletişim</a>
   <button class="theme-btn" id="themeBtn" title="Temayı değiştir" aria-label="Temayı değiştir">◐</button>
 </div></nav>
 
@@ -145,7 +144,7 @@ function optLabel(o,persp){return (persp==="c"&&o.lc)||(persp==="r"&&o.lr)||o.l;
 
 /* ============ Store: Firestore öncelikli, offline'da localStorage ============ */
 const Store=(function(){
-  let db=null,fs=null,ready=false;
+  let db=null,fs=null,ready=false,userP=Promise.resolve(null);
   async function init(){
     try{
       const app=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
@@ -153,6 +152,17 @@ const Store=(function(){
       const cfg={apiKey:"AIzaSyD_MIekQmU9wOtam8vrckMyhgjHKD_ZR9o",authDomain:"kriterin.firebaseapp.com",projectId:"kriterin",storageBucket:"kriterin.firebasestorage.app",messagingSenderId:"46765593126",appId:"1:46765593126:web:25738b3ebc5f1168f0cce7"};
       const a=app.initializeApp(cfg,"anket");
       db=store.getFirestore(a); fs=store; ready=true;
+      // Günün Sorusu'nda Google ile giriş yapan kullanıcıyı tanı (aynı proje, aynı oturum)
+      userP=(async()=>{
+        try{
+          const am=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+          const auth=am.getAuth(a);
+          return await new Promise(res=>{
+            const t=setTimeout(()=>res(null),3000);
+            am.onAuthStateChanged(auth,u=>{clearTimeout(t);res(u||null);},()=>{clearTimeout(t);res(null);});
+          });
+        }catch(e){return null;}
+      })();
     }catch(e){ ready=false; } // offline/önizleme → localStorage
   }
   const initP=init();
@@ -161,6 +171,8 @@ const Store=(function(){
   function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
   function rid(){return Math.random().toString(36).slice(2,9)}
   return {
+    async getUser(){ await initP; return userP; },
+    async online(){ await initP; return ready; },
     async createSurvey(data){
       await initP;
       if(ready){
@@ -352,6 +364,7 @@ function renderCreate(){
     const url=location.origin+location.pathname+"?id="+id;
     linkOut.innerHTML="";
     linkOut.appendChild(h(`<div class="card">
+      ${id.startsWith("loc_")?`<div class="msg err">⚠️ Sunucuya bağlanılamadı — bu link yalnızca bu cihazda çalışır. Reklam engelleyici Firebase'i engelliyor olabilir; kapatıp tekrar dene.</div>`:""}
       <div class="msg ok">✓ Anketin hazır! Bu linki arkadaşlarına at.</div>
       <div class="linkbox">
         <input class="inp" id="shareUrl" readonly value="${esc(url)}">
@@ -506,12 +519,20 @@ async function renderRespond(id){
 
   if(done){ showResult(done.score,done.name,true); return; }
 
-  const nameCard=h(`<div class="card"><div class="field" style="margin:0">
-    <label for="rname">Takma adın</label>
-    <input class="inp" id="rname" maxlength="24" placeholder="Örn: Mehmet">
-    <p class="hint">Liderlik tablosunda bu isim görünecek.</p>
-  </div></div>`);
-  app.appendChild(nameCard);
+  // Google ile giriş yapmışsa (Günün Sorusu'ndan) takma ad sorulmaz, Google adı kullanılır
+  let gUser=null; try{ gUser=await Store.getUser(); }catch(e){}
+  const gName=gUser&&gUser.displayName?String(gUser.displayName).trim().slice(0,24):"";
+  let nameCard=null;
+  if(gName){
+    app.appendChild(h(`<div class="msg ok" style="margin:0 0 4px">Merhaba <b>${esc(gName)}</b> — liderlik tablosunda bu isimle görüneceksin.</div>`));
+  }else{
+    nameCard=h(`<div class="card"><div class="field" style="margin:0">
+      <label for="rname">Takma adın</label>
+      <input class="inp" id="rname" maxlength="24" placeholder="Örn: Mehmet">
+      <p class="hint">Liderlik tablosunda bu isim görünecek.</p>
+    </div></div>`);
+    app.appendChild(nameCard);
+  }
 
   const answers={};
   const form=h(`<div></div>`);
@@ -524,7 +545,7 @@ async function renderRespond(id){
 
   submit.addEventListener("click",async()=>{
     err.style.display="none";
-    const name=nameCard.querySelector("#rname").value.trim();
+    const name=gName||(nameCard?nameCard.querySelector("#rname").value.trim():"");
     for(const c of survey.criteria){
       if(answers[c.id]==null||answers[c.id]===""){
         err.textContent=`"${c.title}" için cevabını gir.`; err.style.display="block";
@@ -534,7 +555,15 @@ async function renderRespond(id){
     if(!name){ err.textContent="Takma adını yaz."; err.style.display="block"; return; }
     const {score}=computeScore(survey,answers);
     submit.disabled=true; submit.innerHTML='<span class="spin" style="width:16px;height:16px;border-width:2px"></span>';
-    try{ await Store.addResponse(id,{name,score}); }catch(e){}
+    try{
+      await Store.addResponse(id,{name,score});
+    }catch(e){
+      // Kayıt başarısız: sahte başarı gösterme — kullanıcı tekrar deneyebilsin
+      submit.disabled=false; submit.textContent="Uyumumu hesapla";
+      err.textContent="Cevabın kaydedilemedi — liderlik tablosuna eklenemedin. İnternetini kontrol edip tekrar dene.";
+      err.style.display="block"; err.scrollIntoView({behavior:"smooth",block:"center"});
+      return;
+    }
     try{ localStorage.setItem(alreadyKey,JSON.stringify({score,name})); }catch(e){}
     app.innerHTML="";
     app.appendChild(h(`<div class="top">
@@ -581,11 +610,12 @@ async function renderRespond(id){
     </div>`);
     app.appendChild(res);
     const panel=res.querySelector("[data-panel]");
-    let rows=[]; try{rows=await Store.getLeaderboard(id);}catch(e){}
-    panel.innerHTML="";
-    if(!rows.length){
-      panel.appendChild(h(`<p class="mini center" style="padding:16px 0">Henüz kimse yok. İlk sensin! 🎉</p>`));
-    }else{
+    function paintRows(rows){
+      panel.innerHTML="";
+      if(!rows.length){
+        panel.appendChild(h(`<p class="mini center" style="padding:16px 0">Henüz kimse yok. İlk sensin! 🎉</p>`));
+        return;
+      }
       const wrap=h(`<div></div>`);
       rows.forEach((r,i)=>{
         const me=(r.name===name&&Math.round(r.score*10)===Math.round(score*10));
@@ -597,6 +627,17 @@ async function renderRespond(id){
       });
       panel.appendChild(wrap);
     }
+    async function loadRows(){
+      panel.innerHTML='<div class="center" style="padding:24px 0"><span class="spin"></span></div>';
+      let rows=null; try{rows=await Store.getLeaderboard(id);}catch(e){rows=null;}
+      if(rows!==null){ paintRows(rows); return; }
+      // Hata ile "henüz boş"u ayırt et: sorun varsa kullanıcı bilsin, tekrar deneyebilsin
+      panel.innerHTML="";
+      const retry=h(`<div><p class="mini center" style="padding:10px 0 6px">Liderlik tablosu yüklenemedi.</p><button class="btn sec" style="margin-bottom:6px">Tekrar dene</button></div>`);
+      retry.querySelector("button").addEventListener("click",loadRows);
+      panel.appendChild(retry);
+    }
+    await loadRows();
     app.appendChild(h(`<a class="btn data" style="margin-top:14px;text-decoration:none" href="/anket.html">Kendi anketini yap →</a>`));
     if(revisit){
       app.insertBefore(h(`<div class="msg ok">Bu ankete daha önce katıldın — sonucun ve liderlik tablosu aşağıda.</div>`),res);

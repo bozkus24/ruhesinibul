@@ -122,10 +122,8 @@ input[type=text]:focus{border-color:var(--accent)}
 <div class="nav"><div class="nav-in">
   <a class="nav-logo" href="/"><img src="/favicon-96.png" alt="" width="24" height="24"><span>Kriterin</span></a>
   <span class="sp"></span>
-  <a class="lnk" href="/hesaplayici.html">Hesaplayıcı</a>
-  <a class="lnk active" href="/gunun-sorusu.html">Günün Sorusu</a>
-  <a class="lnk" href="/anket.html">Anket</a>
-  <a class="lnk" href="/yazilar.html">Yazılar</a>
+  <a class="lnk" href="/hakkimizda.html">Hakkımızda</a>
+  <a class="lnk" href="mailto:kriterincom@gmail.com">İletişim</a>
   <button class="theme-btn" id="themeBtn" title="Temayı değiştir" aria-label="Temayı değiştir">◐</button>
 </div></div>
 
@@ -189,22 +187,19 @@ input[type=text]:focus{border-color:var(--accent)}
   <div class="card" id="authCard">
     <div id="authOut">
       <div class="q" style="font-size:16px">Seri ve sıralama için giriş yap</div>
-      <p class="qhint">Google ile giriş yaparsan serin cihazlar arası saklanır ve leaderboard'a girersin. Girmeden de oynayabilirsin — seri yalnızca bu cihazda kalır.</p>
+      <p class="qhint">Google ile giriş yaparsan serin cihazlar arası saklanır ve liderlik tablosuna girersin. Girmeden de oynayabilirsin — seri yalnızca bu cihazda kalır.</p>
       <button class="gbtn" id="loginBtn">
         <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.4 5.4 2.6 13.2l7.8 6.1C12.2 13.6 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.1-3.8 6.5-9.4 6.5-16z"/><path fill="#FBBC05" d="M10.4 28.3c-.5-1.4-.8-2.9-.8-4.3s.3-3 .8-4.3l-7.8-6.1C1 16.5 0 20.1 0 24s1 7.5 2.6 10.4l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.6l-7.1-5.5c-2 1.3-4.6 2.1-8.2 2.1-6.4 0-11.8-4.1-13.6-9.8l-7.8 6.1C6.4 42.6 14.6 48 24 48z"/></svg>
         Google ile giriş yap
       </button>
     </div>
     <div id="authIn" class="hidden">
-      <div class="me"><div class="av" id="meAv">O</div><div><b id="meName">Oyuncu</b><div class="sub">Google ile giriş yapıldı · seri senkron</div></div><a class="out" id="logoutBtn">çıkış</a></div>
-      <label for="dispName">Leaderboard'da görünecek ismin</label>
-      <div class="inrow"><input type="text" id="dispName" maxlength="18" placeholder="ör. Kartal34" autocomplete="off"><button class="btn" id="saveName">Kaydet</button></div>
-      <div class="mod">İstediğin ismi yazabilirsin. Uygunsuz isimler engellenir.</div>
+      <div class="me"><div class="av" id="meAv">O</div><div><b id="meName">Oyuncu</b><div class="sub">Google ile giriş yapıldı · liderlik tablosunda Google adınla görünürsün</div></div><a class="out" id="logoutBtn">çıkış</a></div>
     </div>
   </div>
 
   <div class="card" id="lbCard">
-    <div class="q" style="font-size:16px;margin-bottom:12px">Leaderboard</div>
+    <div class="q" style="font-size:16px;margin-bottom:12px">Liderlik Tablosu</div>
     <div class="tabs"><button class="tab on" id="tabStreak">En uzun seri</button><button class="tab" id="tabTries">En az tahminde</button></div>
     <div id="lbBody"><p class="qhint" style="text-align:center;padding:10px 0;margin:0">Yükleniyor…</p></div>
     <p class="mini" id="lbNote" style="margin-top:14px"></p>
@@ -424,18 +419,19 @@ input[type=text]:focus{border-color:var(--accent)}
   function esc(s){return (s+'').replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});}
   function ymd(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
   var todayKey=ymd(new Date());
-  var user=null, curBoard='streak';
+  var user=null, curBoard='streak', myName='';
 
   function onAuth(u){
     user=u;
     $('authOut').classList.toggle('hidden', !!u);
     $('authIn').classList.toggle('hidden', !u);
     if(u){
+      // Google adı otomatik kullanılır; ad sorulmaz. Sunucuda kayıtlı ad varsa o korunur.
+      myName=cleanName(u.name)||'Oyuncu';
       $('meName').textContent=u.name||'Oyuncu';
       $('meAv').textContent=(u.name||'O').charAt(0).toUpperCase();
-      if(window.KB&&KB.getMine){ KB.getMine().then(function(d){ $('dispName').value=(d&&d.name)||get(LSn)||u.name||''; }).catch(function(){}); }
-      else { $('dispName').value=get(LSn)||u.name||''; }
-      syncIfDone();
+      if(window.KB&&KB.getMine){ KB.getMine().then(function(d){ if(d&&d.name)myName=d.name; syncIfDone(); }).catch(function(){ syncIfDone(); }); }
+      else { syncIfDone(); }
     }
     loadBoards();
   }
@@ -444,11 +440,10 @@ input[type=text]:focus{border-color:var(--accent)}
 
   $('loginBtn').addEventListener('click', function(){ if(window.KB&&KB.signIn) KB.signIn(); else alert('Giriş yalnızca canlı sitede çalışır.'); });
   $('logoutBtn').addEventListener('click', function(){ if(window.KB&&KB.signOut) KB.signOut(); });
-  $('saveName').addEventListener('click', function(){ var n=cleanName($('dispName').value); if(!n){alert('Bu isim kullanılamaz, başka bir isim dene.');return;} $('dispName').value=n; if(window.KB&&KB.setName) KB.setName(n).then(loadBoards).catch(function(){}); });
 
   function syncIfDone(){
     try{ var s=JSON.parse(get(LSg)||'{}'); if(s.date===todayKey && s.done && user && window.KB&&KB.complete){
-      var disp=cleanName($('dispName').value)||user.name||'Oyuncu';
+      var disp=myName||cleanName(user.name)||'Oyuncu';
       KB.complete(disp, !!s.solved, (s.guesses?s.guesses.length:5), todayKey).then(loadBoards).catch(function(){});
     }}catch(e){}
   }
@@ -459,7 +454,7 @@ input[type=text]:focus{border-color:var(--accent)}
 
   function loadBoards(){
     var body=$('lbBody'), note=$('lbNote');
-    if(!(window.KB&&KB.board)){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Leaderboard yalnızca canlı sitede çalışır. Giriş yapıp sıralamaya katılabilirsin.</p>'; note.textContent=''; return; }
+    if(!(window.KB&&KB.board)){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yalnızca canlı sitede çalışır. Giriş yapıp sıralamaya katılabilirsin.</p>'; note.textContent=''; return; }
     body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Yükleniyor…</p>';
     KB.board(curBoard).then(function(list){
       var html='';
@@ -471,7 +466,7 @@ input[type=text]:focus{border-color:var(--accent)}
       });
       body.innerHTML=html;
       note.textContent = curBoard==='streak' ? 'En uzun seriye göre sıralama.' : 'En az 10 gün oynayanlar arasında, ortalama tahmin sayısına göre (az = iyi).';
-    }).catch(function(){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Leaderboard yüklenemedi.</p>'; });
+    }).catch(function(){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yüklenemedi.</p>'; });
   }
 
   loadBoards();
