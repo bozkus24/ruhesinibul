@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="tr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Anket Oluştur — Kriterin</title>
+<meta name="description" content="Kendi kriterlerinden anketini oluştur, arkadaşlarına link at; ne kadar uyduklarını ve liderlik tablosunu gör.">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon-96.png" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="robots" content="index,follow">
+<style>
+:root{--bg:#f6f3f1;--surface:#fff;--surface-2:#faf7f6;--ink:#231a20;--muted:#8a7f87;--line:#e8e0e1;--accent:#e0405f;--accent-soft:#fbe6ea;--data:#1f9c92;--data-soft:#e2f2f0;--shadow:0 1px 2px rgba(35,26,32,.05),0 12px 30px -18px rgba(35,26,32,.28);--radius:14px;--font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--maxw:820px}
+[data-theme=dark]{--bg:#151016;--surface:#1e1720;--surface-2:#241c26;--ink:#f2eaef;--muted:#9a8f98;--line:#332a33;--accent:#ff6a82;--accent-soft:#3a2028;--data:#3fc3b5;--data-soft:#173029;--shadow:0 1px 2px rgba(0,0,0,.3),0 14px 34px -18px rgba(0,0,0,.7)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.sitenav{border-bottom:1px solid var(--line);background:var(--surface)}
+.sitenav-in{max-width:var(--maxw);margin:0 auto;display:flex;align-items:center;gap:14px;padding:12px 18px}
+.sitenav .nb{display:flex;align-items:center;gap:7px;font-weight:800;color:var(--accent);text-decoration:none;font-size:15.5px}
+.sitenav .nb img{width:24px;height:24px}
+.sitenav .sp{flex:1}
+.sitenav a.lnk{color:var(--muted);text-decoration:none;font-weight:600;font-size:13.5px;white-space:nowrap}
+.sitenav a.lnk:hover{color:var(--accent)}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:22px 18px 60px}
+.top{margin:14px 0 18px}
+.eyebrow{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:800}
+h1{margin:6px 0 6px;font-size:clamp(23px,5vw,32px);letter-spacing:-.02em;line-height:1.12}
+.lede{color:var(--muted);margin:0;font-size:15px}
+.theme-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);width:38px;height:38px;border-radius:10px;cursor:pointer;font-size:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 16px;margin:14px 0}
+.field{margin:0 0 14px}
+.field>label{display:block;font-weight:700;font-size:13.5px;margin-bottom:6px}
+.inp{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:var(--surface-2);color:var(--ink);font:inherit;font-size:15px}
+.inp:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+.hint{color:var(--muted);font-size:12.5px;margin:4px 0 0}
+.crit{border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden;background:var(--surface-2)}
+.crit-head{display:flex;align-items:center;gap:11px;padding:12px 13px;cursor:pointer;user-select:none}
+.crit-head .ct{font-weight:700;font-size:14.5px;flex:1}
+.crit-head .cstate{font-size:12px;color:var(--muted);font-weight:600}
+.sw{position:relative;width:42px;height:24px;border-radius:20px;background:var(--line);flex:0 0 auto;transition:background .15s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.crit.on .sw{background:var(--data)}
+.crit.on .sw::after{left:20px}
+.crit-body{display:none;padding:2px 13px 14px;border-top:1px solid var(--line)}
+.crit.on .crit-body{display:block}
+.opts{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0 2px}
+.opt{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;transition:.12s}
+.opt:hover{border-color:var(--accent)}
+.opt.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+.subtle{font-size:12px;color:var(--muted);margin:10px 0 3px;font-weight:700;letter-spacing:.02em}
+.rangepick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+.rangepick .num{width:88px}
+.rangepick span{color:var(--muted);font-size:13px}
+.imp{display:flex;gap:6px;margin-top:8px}
+.imp button{flex:1;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 0;border-radius:9px;font-weight:800;font-size:14px;cursor:pointer}
+.imp button.sel{background:var(--data);border-color:var(--data);color:#fff}
+.imp-lbl{font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between;margin-top:5px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:12px;padding:13px 18px;font:inherit;font-weight:800;font-size:15px;cursor:pointer;background:var(--accent);color:#fff;width:100%}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sec{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn.data{background:var(--data)}
+.addbtn{background:none;border:1px dashed var(--line);color:var(--accent);border-radius:11px;padding:11px;width:100%;font-weight:700;cursor:pointer;font-size:13.5px}
+.msg{padding:11px 13px;border-radius:11px;font-size:13.5px;font-weight:600;margin:10px 0}
+.msg.err{background:var(--accent-soft);color:var(--accent)}
+.msg.ok{background:var(--data-soft);color:var(--data)}
+.linkbox{display:flex;gap:8px;margin-top:10px}
+.linkbox input{flex:1}
+.result-ring{text-align:center;padding:14px 0 4px}
+.big{font-size:58px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.big small{font-size:24px}
+.lb-row{display:flex;align-items:center;gap:11px;padding:10px 4px;border-top:1px solid var(--line)}
+.lb-row:first-child{border-top:none}
+.lb-rank{width:26px;text-align:center;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.lb-name{flex:1;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-score{font-weight:800;color:var(--data);font-variant-numeric:tabular-nums}
+.lb-row.me{background:var(--accent-soft);border-radius:10px;padding-left:8px;padding-right:8px}
+.lb-row.top1 .lb-rank{color:#e0a020}
+.mini{font-size:12px;color:var(--muted)}
+footer{border-top:1px solid var(--line);margin-top:30px;padding:20px 18px;color:var(--muted);font-size:12.5px;text-align:center}
+footer a{color:var(--muted);margin:0 7px;text-decoration:none}
+.center{text-align:center}
+.spin{display:inline-block;width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<nav class="sitenav"><div class="sitenav-in">
+  <a class="nb" href="/"><img src="/favicon-96.png" alt="" width="24" height="24"><span>Kriterin</span></a>
+  <span class="sp"></span>
+  <a class="lnk" href="/hesaplayici.html">Hesaplayıcı</a>
+  <a class="lnk" href="/gunun-sorusu.html">Günün Sorusu</a>
+  <a class="lnk" href="/yazilar.html">Yazılar</a>
+  <button class="theme-btn" id="themeBtn" title="Temayı değiştir" aria-label="Temayı değiştir">◐</button>
+</div></nav>
+
+<main class="wrap" id="app">
+  <div class="center" style="padding:60px 0"><span class="spin"></span></div>
+</main>
+
+<footer>
+  <div><a href="/">Ana sayfa</a><a href="/gunun-sorusu.html">Günün Sorusu</a><a href="/hakkimizda.html">Hakkımızda</a><a href="/gizlilik-politikasi.html">Gizlilik</a></div>
+  <div style="margin-top:8px">Kriterin · Kendi kriterlerinden anketini oluştur, paylaş.</div>
+</footer>
+
+<script type="module">
+/* ============ tema ============ */
+(function(){
+  try{
+    var t=localStorage.getItem("kriterin_tema");
+    if(!t)t=matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";
+    document.documentElement.setAttribute("data-theme",t);
+  }catch(e){}
+})();
+document.getElementById("themeBtn").addEventListener("click",function(){
+  var e=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";
+  document.documentElement.setAttribute("data-theme",e);
+  try{localStorage.setItem("kriterin_tema",e)}catch(x){}
+});
+
+/* ============ kriter seti (IQ hariç) ============ */
+/* type: gender | single | multi | range   */
+/* option label: l (ortak) · lc (kurucu bakışı) · lr (katılımcı bakışı) opsiyonel */
+const CRITERIA=[
+  {id:"yas",title:"Yaş",type:"range",min:18,max:90,unit:"",dmin:25,dmax:35,step:1},
+  {id:"boy",title:"Boy",type:"range",min:130,max:250,unit:" cm",dmin:165,dmax:185,step:2},
+  {id:"sehir",title:"Şehir",type:"multi",options:[{v:"istanbul",l:"İstanbul"},{v:"ankara",l:"Ankara"},{v:"izmir",l:"İzmir"},{v:"bursa",l:"Bursa"},{v:"antalya",l:"Antalya"},{v:"diger",l:"Diğer"}]},
+  {id:"irk",title:"Etnik köken",type:"multi",options:[{v:"turk",l:"Türk"},{v:"kurt",l:"Kürt"},{v:"zaza",l:"Zaza"},{v:"arap",l:"Arap"},{v:"cerkez",l:"Çerkez"},{v:"bosnak",l:"Boşnak"},{v:"laz",l:"Laz"},{v:"arnavut",l:"Arnavut"},{v:"gurcu",l:"Gürcü"},{v:"roman",l:"Roman"},{v:"diger",l:"Diğer"}]},
+  {id:"din",title:"Din",type:"multi",options:[{v:"musluman",l:"Müslüman"},{v:"deist",l:"Deist"},{v:"agnostik",l:"Agnostik"},{v:"ateist",l:"Ateist"},{v:"musevi",l:"Musevi"},{v:"diger",l:"Diğer"}]},
+  {id:"egitim",title:"Eğitim durumu",type:"multi",hint:"Devam edilen okulu değil, en son mezun olunan okulu seçin.",options:[{v:"yok",l:"Okul bitirmemiş"},{v:"ilk",l:"İlkokul"},{v:"orta",l:"Ortaokul"},{v:"lise",l:"Lise"},{v:"onlisans",l:"Ön lisans"},{v:"lisans",l:"Lisans"},{v:"yl",l:"Yüksek lisans"},{v:"dr",l:"Doktora"}]},
+  {id:"maas",title:"Aylık maaş",type:"multi",options:[{v:"m1",l:"28.072 ₺ ve altı"},{v:"m2",l:"28.073–42.108 ₺"},{v:"m3",l:"42.109–56.144 ₺"},{v:"m4",l:"56.145–84.216 ₺"},{v:"m5",l:"84.217–112.288 ₺"},{v:"m6",l:"112.289–127.000 ₺"},{v:"m7",l:"127.001 ₺ ve üstü"}]},
+  {id:"sigara",title:"Sigara",type:"single",options:[{v:"evet",l:"İçiyor",lc:"İçsin",lr:"İçiyorum"},{v:"hayir",l:"İçmiyor",lc:"İçmesin",lr:"İçmiyorum"}]},
+  {id:"alkol",title:"Alkol",type:"single",options:[{v:"evet",l:"İçiyor",lc:"İçsin",lr:"İçiyorum"},{v:"hayir",l:"İçmiyor",lc:"İçmesin",lr:"İçmiyorum"}]},
+  {id:"vucut",title:"Vücut tipi",type:"multi",options:[{v:"zayif",l:"Zayıf"},{v:"normal",l:"Normal"},{v:"atletik",l:"Atletik / kaslı"},{v:"kilolu",l:"Kilolu"},{v:"obez",l:"Obez"}]},
+  {id:"sacRenk",title:"Saç rengi",type:"multi",options:[{v:"siyah",l:"Siyah"},{v:"koyukahve",l:"Koyu kahverengi"},{v:"kumral",l:"Kumral"},{v:"sari",l:"Sarı"},{v:"kizil",l:"Kızıl"}]},
+  {id:"sacSekil",title:"Saç şekli",type:"multi",options:[{v:"duz",l:"Düz"},{v:"dalgali",l:"Dalgalı"},{v:"kivircik",l:"Kıvırcık"}]},
+  {id:"goz",title:"Göz rengi",type:"multi",options:[{v:"kahve",l:"Kahverengi / Siyah"},{v:"ela",l:"Ela / Bal"},{v:"yesil",l:"Yeşil"},{v:"mavi",l:"Mavi"}]},
+  {id:"burc",title:"Burç",type:"multi",options:[{v:"koc",l:"Koç"},{v:"boga",l:"Boğa"},{v:"ikizler",l:"İkizler"},{v:"yengec",l:"Yengeç"},{v:"aslan",l:"Aslan"},{v:"basak",l:"Başak"},{v:"terazi",l:"Terazi"},{v:"akrep",l:"Akrep"},{v:"yay",l:"Yay"},{v:"oglak",l:"Oğlak"},{v:"kova",l:"Kova"},{v:"balik",l:"Balık"}]},
+  {id:"takim",title:"Tuttuğu takım",type:"multi",options:[{v:"gs",l:"Galatasaray"},{v:"fb",l:"Fenerbahçe"},{v:"bjk",l:"Beşiktaş"},{v:"ts",l:"Trabzonspor"},{v:"diger",l:"Diğer"},{v:"yok",l:"Takım tutmuyor"}]},
+  {id:"cocuk",title:"Çocuk ister mi?",type:"single",options:[{v:"evet",l:"İstiyor",lc:"İstesin",lr:"İstiyorum"},{v:"hayir",l:"İstemiyor",lc:"İstemesin",lr:"İstemiyorum"}]}
+];
+const CMAP=Object.fromEntries(CRITERIA.map(c=>[c.id,c]));
+function optLabel(o,persp){return (persp==="c"&&o.lc)||(persp==="r"&&o.lr)||o.l;}
+
+/* ============ Store: Firestore öncelikli, offline'da localStorage ============ */
+const Store=(function(){
+  let db=null,fs=null,ready=false;
+  async function init(){
+    try{
+      const app=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+      const store=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+      const cfg={apiKey:"AIzaSyD_MIekQmU9wOtam8vrckMyhgjHKD_ZR9o",authDomain:"kriterin.firebaseapp.com",projectId:"kriterin",storageBucket:"kriterin.firebasestorage.app",messagingSenderId:"46765593126",appId:"1:46765593126:web:25738b3ebc5f1168f0cce7"};
+      const a=app.initializeApp(cfg,"anket");
+      db=store.getFirestore(a); fs=store; ready=true;
+    }catch(e){ ready=false; } // offline/önizleme → localStorage
+  }
+  const initP=init();
+  // localStorage fallback helpers
+  function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||"null")}catch(e){return null}}
+  function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+  function rid(){return Math.random().toString(36).slice(2,9)}
+  return {
+    async createSurvey(data){
+      await initP;
+      if(ready){
+        const {collection,addDoc}=fs;
+        const ref=await addDoc(collection(db,"surveys"),{...data,createdAt:Date.now()});
+        return ref.id;
+      }
+      const id="loc_"+rid();
+      lsSet("kriterin_anket_"+id,{...data,createdAt:Date.now(),responses:[]});
+      return id;
+    },
+    async getSurvey(id){
+      await initP;
+      if(ready&&!id.startsWith("loc_")){
+        const {doc,getDoc}=fs;
+        const s=await getDoc(doc(db,"surveys",id));
+        return s.exists()?s.data():null;
+      }
+      const d=lsGet("kriterin_anket_"+id);
+      return d?{name:d.name,criteria:d.criteria}:null;
+    },
+    async addResponse(id,resp){
+      await initP;
+      if(ready&&!id.startsWith("loc_")){
+        const {collection,addDoc}=fs;
+        await addDoc(collection(db,"surveys",id,"responses"),{...resp,createdAt:Date.now()});
+        return;
+      }
+      const d=lsGet("kriterin_anket_"+id); if(!d)return;
+      d.responses=d.responses||[]; d.responses.push({...resp,createdAt:Date.now()});
+      lsSet("kriterin_anket_"+id,d);
+    },
+    async getLeaderboard(id){
+      await initP;
+      if(ready&&!id.startsWith("loc_")){
+        const {collection,getDocs,query,orderBy,limit}=fs;
+        const q=query(collection(db,"surveys",id,"responses"),orderBy("score","desc"),limit(100));
+        const snap=await getDocs(q);
+        return snap.docs.map(d=>d.data());
+      }
+      const d=lsGet("kriterin_anket_"+id);
+      return d&&d.responses?d.responses.slice().sort((a,b)=>b.score-a.score):[];
+    }
+  };
+})();
+
+/* ============ ortak yardımcılar ============ */
+const app=document.getElementById("app");
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+function h(html){const t=document.createElement("template");t.innerHTML=html.trim();return t.content.firstElementChild;}
+
+/* ============ skor hesabı ============
+   Her soru 5 puan üzerinden: doğru şık 5, yanlış şık 0.
+   Alınan puan = pts(0–5) × ağırlık.  Tavan = 5 × ağırlık.
+   Boy: aralık dışında her `step` cm (2) için 1 puan düşer.
+   Yaş: aralık dışında her `step` yaş (1) için 1 puan düşer.
+   Uyum % = Σ(alınan) / Σ(tavan) × 100
+========================================= */
+const MAXPTS=5;
+function rangePoints(c,n){
+  if(isNaN(n))return 0;
+  if(n>=c.min&&n<=c.max)return MAXPTS;
+  const step=c.step||1;
+  const dist=n<c.min?(c.min-n):(n-c.max);
+  const drop=Math.ceil(dist/step);
+  return Math.max(0,MAXPTS-drop);
+}
+function computeScore(survey,answers){
+  let got=0,maxTotal=0; const brk=[];
+  for(const c of survey.criteria){
+    const w=c.weight; maxTotal+=MAXPTS*w;
+    let pts=0; const ans=answers[c.id];
+    if(c.type==="range"){
+      pts=(ans===""||ans==null)?0:rangePoints(c,Number(ans));
+    }else{
+      pts=(ans!=null&&c.accepted.includes(ans))?MAXPTS:0;
+    }
+    got+=pts*w;
+    brk.push({id:c.id,title:c.title,w,pts,earned:pts*w,max:MAXPTS*w,match:pts===MAXPTS?1:0});
+  }
+  // En yakın ondalığa yuvarlanmış yüzde (örn. 82.7)
+  const score=maxTotal>0?Math.round(1000*got/maxTotal)/10:0;
+  return {score,brk,got,maxTotal};
+}
+// %82.7 gibi göster; tam sayıysa ondalıksız (%100)
+const fmtScore=s=>{const n=Math.round(Number(s)*10)/10;return Number.isInteger(n)?String(n):n.toFixed(1);};
+
+/* ============ ROUTER ============ */
+const params=new URLSearchParams(location.search);
+const surveyId=params.get("id");
+if(surveyId){ renderRespond(surveyId); } else { renderCreate(); }
+
+/* =========================================================
+   OLUŞTUR MODU
+========================================================= */
+function renderCreate(){
+  app.innerHTML="";
+  app.appendChild(h(`<div class="top">
+    <div class="eyebrow">Anket oluşturucu</div>
+    <h1>Kendi kriterlerinden anketini oluştur</h1>
+    <p class="lede">İstediğin kriterleri seç, her birine 1–5 önem ver. Link oluştur, arkadaşlarına at; sana ne kadar uyduklarını ve liderlik tablosunu görün.</p>
+  </div>`));
+
+  const nameCard=h(`<div class="card"><div class="field" style="margin:0">
+    <label for="sname">Anketine bir isim ver</label>
+    <input class="inp" id="sname" maxlength="40" placeholder="Örn: Ayşe'nin kriterleri">
+    <p class="hint">Arkadaşların bu ismi görecek.</p>
+  </div></div>`);
+  app.appendChild(nameCard);
+
+  const list=h(`<div id="critList"></div>`);
+  app.appendChild(list);
+
+  // state: her kriter için {on, accepted:Set/val, range:{min,max}, weight}
+  const state={};
+  CRITERIA.forEach(c=>{ state[c.id]={on:false,accepted:[],min:c.dmin,max:c.dmax,weight:3}; });
+
+  CRITERIA.forEach(c=>list.appendChild(buildCritEditor(c,state[c.id])));
+
+  // custom kriter
+  const customWrap=h(`<div id="customList"></div>`);
+  app.appendChild(customWrap);
+  const addBtn=h(`<button class="addbtn" id="addCustom">＋ Kendi kriterini ekle</button>`);
+  app.appendChild(addBtn);
+  let customN=0;
+  addBtn.addEventListener("click",()=>{
+    customN++; const cid="custom"+customN;
+    const cc={id:cid,title:"",type:"single",options:[],custom:true};
+    const st={on:true,accepted:[],weight:3,opts:["",""],q:""};
+    customWrap.appendChild(buildCustomEditor(cc,st,()=>{}));
+    customCards.push({c:cc,st});
+  });
+  const customCards=[];
+
+  // oluştur
+  const err=h(`<div class="msg err" id="cErr" style="display:none"></div>`);
+  const submit=h(`<button class="btn" id="createBtn" style="margin-top:14px">Anketi oluştur ve link al</button>`);
+  app.appendChild(err); app.appendChild(submit);
+
+  const linkOut=h(`<div id="linkOut"></div>`);
+  app.appendChild(linkOut);
+
+  submit.addEventListener("click",async()=>{
+    err.style.display="none";
+    const name=nameCard.querySelector("#sname").value.trim();
+    const criteria=[];
+    // hazır kriterler
+    for(const c of CRITERIA){
+      const s=state[c.id]; if(!s.on)continue;
+      if(c.type==="range"){
+        let mn=Number(s.min),mx=Number(s.max);
+        if(isNaN(mn)||isNaN(mx)){continue;}
+        if(mn>mx){[mn,mx]=[mx,mn];}
+        criteria.push({id:c.id,title:c.title,type:"range",min:mn,max:mx,unit:c.unit,step:c.step||1,absMin:c.min,absMax:c.max,weight:s.weight});
+      }else{
+        if(!s.accepted.length){ return fail(`"${c.title}" için en az bir seçenek işaretle ya da kapat.`);}
+        criteria.push({id:c.id,title:c.title,type:c.type,hint:c.hint||"",options:c.options,accepted:s.accepted.slice(),weight:s.weight});
+      }
+    }
+    // custom kriterler
+    for(const cc of customCards){
+      const q=cc.st.q.trim(); const opts=cc.st.opts.map(o=>o.trim()).filter(Boolean);
+      if(!q&&!opts.length&&!cc.st.accepted.length)continue; // boş bırakılmış
+      if(!q) return fail("Eklediğin kriterin sorusunu yaz ya da onu sil.");
+      if(opts.length<2) return fail(`"${q}" için en az 2 seçenek yaz.`);
+      const options=opts.map((l,i)=>({v:"o"+i,l}));
+      const accepted=cc.st.accepted.filter(v=>options.some(o=>o.v===v));
+      if(!accepted.length) return fail(`"${q}" için istediğin cevabı işaretle.`);
+      criteria.push({id:cc.c.id,title:q,type:"multi",options,accepted,weight:cc.st.weight,custom:true});
+    }
+    if(!name) return fail("Anketine bir isim ver.");
+    if(criteria.length<2) return fail("En az 2 kriter seç. Anket daha anlamlı olur.");
+
+    submit.disabled=true; submit.innerHTML='<span class="spin" style="width:16px;height:16px;border-width:2px"></span> Oluşturuluyor…';
+    try{
+      const id=await Store.createSurvey({name,criteria});
+      showLink(id,name);
+    }catch(e){
+      submit.disabled=false; submit.textContent="Anketi oluştur ve link al";
+      fail("Bir hata oldu, tekrar dene.");
+    }
+    function fail(m){ err.textContent=m; err.style.display="block"; err.scrollIntoView({behavior:"smooth",block:"center"}); return; }
+  });
+
+  function fail(m){ err.textContent=m; err.style.display="block"; err.scrollIntoView({behavior:"smooth",block:"center"}); }
+
+  function showLink(id,name){
+    submit.style.display="none";
+    const url=location.origin+location.pathname+"?id="+id;
+    linkOut.innerHTML="";
+    linkOut.appendChild(h(`<div class="card">
+      <div class="msg ok">✓ Anketin hazır! Bu linki arkadaşlarına at.</div>
+      <div class="linkbox">
+        <input class="inp" id="shareUrl" readonly value="${esc(url)}">
+        <button class="btn sec" id="copyBtn" style="width:auto;padding:11px 16px">Kopyala</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <a class="btn data" style="text-decoration:none" href="${esc(url)}">Anketi aç →</a>
+        <button class="btn sec" id="waBtn" style="width:auto;padding:13px 16px">WhatsApp'ta paylaş</button>
+      </div>
+    </div>`));
+    linkOut.querySelector("#copyBtn").addEventListener("click",function(){
+      const i=linkOut.querySelector("#shareUrl"); i.select();
+      navigator.clipboard&&navigator.clipboard.writeText(i.value); this.textContent="Kopyalandı ✓";
+    });
+    linkOut.querySelector("#waBtn").addEventListener("click",()=>{
+      const t=encodeURIComponent(`${name} — kriterlerime ne kadar uyuyorsun? 👀\n`+url);
+      window.open("https://wa.me/?text="+t,"_blank");
+    });
+    linkOut.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+}
+
+function weightControl(st){
+  const wrap=h(`<div><div class="subtle">Önem (ağırlık)</div>
+    <div class="imp"></div>
+    <div class="imp-lbl"><span>En az önemli</span><span>En önemli</span></div></div>`);
+  const row=wrap.querySelector(".imp");
+  for(let i=1;i<=5;i++){
+    const b=h(`<button type="button">${i}</button>`);
+    if(st.weight===i)b.classList.add("sel");
+    b.addEventListener("click",()=>{st.weight=i;[...row.children].forEach((x,ix)=>x.classList.toggle("sel",ix+1===i));});
+    row.appendChild(b);
+  }
+  return wrap;
+}
+
+function buildCritEditor(c,st){
+  const el=h(`<div class="crit" data-id="${c.id}">
+    <div class="crit-head"><div class="sw"></div><div class="ct">${esc(c.title)}</div><div class="cstate">Kapalı</div></div>
+    <div class="crit-body"></div>
+  </div>`);
+  const head=el.querySelector(".crit-head"), body=el.querySelector(".crit-body"), stateLbl=el.querySelector(".cstate");
+  const sw=el.querySelector(".sw");
+  function refreshState(){ stateLbl.textContent=st.on?("Açık · önem "+st.weight):"Kapalı"; }
+  head.addEventListener("click",(e)=>{
+    // toggle switch açar/kapatır; body açıkken başlığa tıklamak da toggle etmesin diye sadece switch bölgesi + head toggle
+    st.on=!st.on; el.classList.toggle("on",st.on); refreshState();
+  });
+
+  if(c.type==="range"){
+    const rp=h(`<div>
+      <div class="subtle">Aradığın aralık</div>
+      <div class="rangepick">
+        <input class="inp num" type="number" min="${c.min}" max="${c.max}" value="${st.min}" id="rmin">
+        <span>—</span>
+        <input class="inp num" type="number" min="${c.min}" max="${c.max}" value="${st.max}" id="rmax">
+        <span>${esc(c.unit)}</span>
+      </div>
+      <p class="hint">Aralık içi tam puan (5/5). Dışına çıktıkça her ${c.step}${esc(c.unit)||" yaş"} için 1 puan düşer.</p>
+    </div>`);
+    rp.querySelector("#rmin").addEventListener("input",e=>st.min=e.target.value);
+    rp.querySelector("#rmax").addEventListener("input",e=>st.max=e.target.value);
+    body.appendChild(rp);
+  }else{
+    const multi=(c.type==="multi"||c.type==="gender");
+    const sub=h(`<div><div class="subtle">${multi?"İstediğin seçenekler (birden fazla olabilir)":"İstediğin cevap"}</div>${c.hint?`<p class="hint" style="margin:0 0 2px">${c.hint}</p>`:""}<div class="opts"></div></div>`);
+    const opts=sub.querySelector(".opts");
+    c.options.forEach(o=>{
+      const b=h(`<button type="button" class="opt">${esc(optLabel(o,"c"))}</button>`);
+      b.addEventListener("click",()=>{
+        if(multi){
+          const i=st.accepted.indexOf(o.v);
+          if(i>=0)st.accepted.splice(i,1); else st.accepted.push(o.v);
+          b.classList.toggle("sel",st.accepted.includes(o.v));
+        }else{
+          st.accepted=[o.v];
+          opts.querySelectorAll(".opt").forEach(x=>x.classList.remove("sel"));
+          b.classList.add("sel");
+        }
+      });
+      opts.appendChild(b);
+    });
+    body.appendChild(sub);
+  }
+  body.appendChild(weightControl(st));
+  // önem değişince state etiketi güncellensin
+  body.querySelectorAll(".imp button").forEach(b=>b.addEventListener("click",refreshState));
+  refreshState();
+  return el;
+}
+
+function buildCustomEditor(c,st){
+  const el=h(`<div class="crit on" data-id="${c.id}">
+    <div class="crit-head"><div class="sw"></div><div class="ct">Kendi kriterin</div><div class="cstate">Açık</div><button type="button" class="opt" style="border-color:var(--accent);color:var(--accent)" data-del>Sil</button></div>
+    <div class="crit-body">
+      <div class="field"><label>Soru</label><input class="inp" data-q maxlength="60" placeholder="Örn: Kedi sever mi?"></div>
+      <div class="subtle">Seçenekler</div>
+      <div data-opts></div>
+      <button type="button" class="addbtn" data-addopt style="margin-top:8px">＋ Seçenek ekle</button>
+      <div class="subtle" style="margin-top:12px">İstediğin cevap(lar)</div>
+      <div class="opts" data-accept></div>
+    </div>
+  </div>`);
+  const del=el.querySelector("[data-del]"); del.addEventListener("click",(e)=>{e.stopPropagation();el.remove();st.deleted=true;st.q="";st.opts=[];st.accepted=[];});
+  el.querySelector(".crit-head").addEventListener("click",(e)=>{ if(e.target.hasAttribute("data-del"))return; });
+  const qIn=el.querySelector("[data-q]");
+  qIn.addEventListener("input",e=>st.q=e.target.value);
+  const optsWrap=el.querySelector("[data-opts]"), acceptWrap=el.querySelector("[data-accept]");
+  function renderAccept(){
+    acceptWrap.innerHTML="";
+    st.opts.forEach((txt,i)=>{
+      const t=txt.trim(); if(!t)return;
+      const v="o"+i;
+      const b=h(`<button type="button" class="opt${st.accepted.includes(v)?" sel":""}">${esc(t)}</button>`);
+      b.addEventListener("click",()=>{const k=st.accepted.indexOf(v);if(k>=0)st.accepted.splice(k,1);else st.accepted.push(v);b.classList.toggle("sel");});
+      acceptWrap.appendChild(b);
+    });
+  }
+  function addOptRow(idx){
+    const row=h(`<div class="rangepick" style="margin-top:6px"><input class="inp" placeholder="Seçenek ${idx+1}" value="${esc(st.opts[idx]||"")}"></div>`);
+    const inp=row.querySelector("input");
+    inp.addEventListener("input",e=>{st.opts[idx]=e.target.value;renderAccept();});
+    optsWrap.appendChild(row);
+  }
+  st.opts=["",""]; addOptRow(0); addOptRow(1);
+  el.querySelector("[data-addopt]").addEventListener("click",()=>{st.opts.push("");addOptRow(st.opts.length-1);});
+  el.querySelector(".crit-body").appendChild(weightControl(st));
+  return el;
+}
+
+/* =========================================================
+   CEVAPLA MODU
+========================================================= */
+async function renderRespond(id){
+  app.innerHTML='<div class="center" style="padding:60px 0"><span class="spin"></span></div>';
+  let survey;
+  try{ survey=await Store.getSurvey(id); }catch(e){ survey=null; }
+  if(!survey){
+    app.innerHTML=`<div class="top"><h1>Anket bulunamadı</h1><p class="lede">Bu link geçersiz ya da anket kaldırılmış olabilir.</p></div>
+      <a class="btn" style="text-decoration:none" href="/anket.html">Kendi anketini oluştur →</a>`;
+    return;
+  }
+  const alreadyKey="kriterin_anket_done_"+id;
+  let done=null; try{done=JSON.parse(localStorage.getItem(alreadyKey)||"null")}catch(e){}
+
+  app.innerHTML="";
+  app.appendChild(h(`<div class="top">
+    <div class="eyebrow">${esc(survey.name)}</div>
+    <h1>Bu kriterlere ne kadar uyuyorsun?</h1>
+    <p class="lede"><b>${esc(survey.name)}</b> kendi kriterlerini belirledi. Kendi özelliklerini gir, uyumunu ve liderlik tablosunu gör.</p>
+  </div>`));
+
+  if(done){ showResult(done.score,done.name,true); return; }
+
+  const nameCard=h(`<div class="card"><div class="field" style="margin:0">
+    <label for="rname">Takma adın</label>
+    <input class="inp" id="rname" maxlength="24" placeholder="Örn: Mehmet">
+    <p class="hint">Liderlik tablosunda bu isim görünecek.</p>
+  </div></div>`);
+  app.appendChild(nameCard);
+
+  const answers={};
+  const form=h(`<div></div>`);
+  survey.criteria.forEach(c=>form.appendChild(buildRespondField(c,answers)));
+  app.appendChild(form);
+
+  const err=h(`<div class="msg err" id="rErr" style="display:none"></div>`);
+  const submit=h(`<button class="btn" style="margin-top:6px">Uyumumu hesapla</button>`);
+  app.appendChild(err); app.appendChild(submit);
+
+  submit.addEventListener("click",async()=>{
+    err.style.display="none";
+    const name=nameCard.querySelector("#rname").value.trim();
+    for(const c of survey.criteria){
+      if(answers[c.id]==null||answers[c.id]===""){
+        err.textContent=`"${c.title}" için cevabını gir.`; err.style.display="block";
+        err.scrollIntoView({behavior:"smooth",block:"center"}); return;
+      }
+    }
+    if(!name){ err.textContent="Takma adını yaz."; err.style.display="block"; return; }
+    const {score}=computeScore(survey,answers);
+    submit.disabled=true; submit.innerHTML='<span class="spin" style="width:16px;height:16px;border-width:2px"></span>';
+    try{ await Store.addResponse(id,{name,score}); }catch(e){}
+    try{ localStorage.setItem(alreadyKey,JSON.stringify({score,name})); }catch(e){}
+    app.innerHTML="";
+    app.appendChild(h(`<div class="top">
+      <div class="eyebrow">${esc(survey.name)}</div>
+      <h1>Sonucun</h1></div>`));
+    showResult(score,name,false);
+  });
+
+  function buildRespondField(c,answers){
+    const el=h(`<div class="card"><div class="field" style="margin:0">
+      <label>${esc(c.title)}</label>
+      ${c.hint?`<p class="hint" style="margin:0 0 7px">${c.hint}</p>`:""}
+      <div data-body></div></div></div>`);
+    const body=el.querySelector("[data-body]");
+    if(c.type==="range"){
+      const lo=c.absMin!=null?c.absMin:c.min, hi=c.absMax!=null?c.absMax:c.max;
+      const inp=h(`<input class="inp" type="number" min="${lo}" max="${hi}" placeholder="Kendi ${esc(c.title.toLowerCase())} değerini yaz${esc(c.unit||"")}">`);
+      inp.addEventListener("input",e=>answers[c.id]=e.target.value);
+      body.appendChild(inp);
+    }else{
+      const opts=h(`<div class="opts" style="margin-top:2px"></div>`);
+      c.options.forEach(o=>{
+        const b=h(`<button type="button" class="opt">${esc(optLabel(o,"r"))}</button>`);
+        b.addEventListener("click",()=>{
+          answers[c.id]=o.v;
+          opts.querySelectorAll(".opt").forEach(x=>x.classList.remove("sel"));
+          b.classList.add("sel");
+        });
+        opts.appendChild(b);
+      });
+      body.appendChild(opts);
+    }
+    return el;
+  }
+
+  /* Puan dökümü bilerek gösterilmiyor — katılımcı neyden puan aldığını görmez.
+     Sadece toplam % + liderlik tablosu. */
+  async function showResult(score,name,revisit){
+    const res=h(`<div class="card">
+      <div class="result-ring"><div class="big">${fmtScore(score)}<small>%</small></div>
+      <div class="mini">${name?esc(name)+" · ":""}${esc(survey.name)} ile uyumun</div></div>
+      <div class="subtle" style="margin-top:10px">Liderlik Tablosu</div>
+      <div data-panel><div class="center" style="padding:24px 0"><span class="spin"></span></div></div>
+    </div>`);
+    app.appendChild(res);
+    const panel=res.querySelector("[data-panel]");
+    let rows=[]; try{rows=await Store.getLeaderboard(id);}catch(e){}
+    panel.innerHTML="";
+    if(!rows.length){
+      panel.appendChild(h(`<p class="mini center" style="padding:16px 0">Henüz kimse yok. İlk sensin! 🎉</p>`));
+    }else{
+      const wrap=h(`<div></div>`);
+      rows.forEach((r,i)=>{
+        const me=(r.name===name&&Math.round(r.score*10)===Math.round(score*10));
+        wrap.appendChild(h(`<div class="lb-row ${i===0?"top1":""} ${me?"me":""}">
+          <span class="lb-rank">${i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1)}</span>
+          <span class="lb-name">${esc(r.name||"—")}</span>
+          <span class="lb-score">%${fmtScore(r.score)}</span>
+        </div>`));
+      });
+      panel.appendChild(wrap);
+    }
+    app.appendChild(h(`<a class="btn data" style="margin-top:14px;text-decoration:none" href="/anket.html">Kendi anketini yap →</a>`));
+    if(revisit){
+      app.insertBefore(h(`<div class="msg ok">Bu ankete daha önce katıldın — sonucun ve liderlik tablosu aşağıda.</div>`),res);
+    }
+  }
+}
+</script>
+</body>
+</html>
