@@ -276,20 +276,37 @@ const fmtScore=s=>{const n=Math.round(Number(s)*10)/10;return Number.isInteger(n
 /* ============ kurucunun anketleri (bu cihazda) ============ */
 function myList(){try{return JSON.parse(localStorage.getItem("kriterin_anket_mine")||"{}")}catch(e){return{}}}
 function mySave(id,key,name){try{const m=myList();m[id]={key:key||"",name:name||"",at:Date.now()};localStorage.setItem("kriterin_anket_mine",JSON.stringify(m))}catch(e){}}
-function resultsUrl(id,key){return location.origin+location.pathname+"?id="+id+"&k="+encodeURIComponent(key||"");}
 function answerLabel(c,v){
   if(c.type==="range")return String(v)+(c.unit||"");
   const o=(c.options||[]).find(o=>o.v===v);
   return o?o.l:String(v);
 }
 
-/* ============ ROUTER ============ */
+/* ============ ROUTER ============
+   Tek link: aynı linki kurucu açarsa sonuçlar, diğerleri açarsa anket gelir.
+   Kurucu; bu cihazdan (localStorage) ya da Google hesabından (owner) tanınır.
+   ?katil=1 → kurucu da ankete katılabilsin. ?k=ANAHTAR → eski sonuç linkleri. */
 const params=new URLSearchParams(location.search);
 const surveyId=params.get("id");
 const adminKey=params.get("k");
 if(surveyId&&adminKey!==null){ renderResults(surveyId,adminKey); }
-else if(surveyId){ renderRespond(surveyId); }
+else if(surveyId){ routeSurvey(surveyId); }
 else { renderCreate(); }
+
+async function routeSurvey(id){
+  if(!params.has("katil")){
+    const mine=myList()[id];
+    if(mine){ renderResults(id,mine.key||""); return; }
+    try{
+      const u=await Store.getUser();
+      if(u){
+        const s=await Store.getSurvey(id);
+        if(s&&s.owner&&s.owner===u.uid){ mySave(id,s.key||"",s.name); renderResults(id,s.key||""); return; }
+      }
+    }catch(e){}
+  }
+  renderRespond(id);
+}
 
 /* =========================================================
    OLUŞTUR MODU
@@ -375,7 +392,8 @@ function renderCreate(){
     submit.disabled=true; submit.innerHTML='<span class="spin" style="width:16px;height:16px;border-width:2px"></span> Oluşturuluyor…';
     try{
       const key=Math.random().toString(36).slice(2,12);
-      const id=await Store.createSurvey({name,criteria,key});
+      let owner=""; try{const u=await Store.getUser(); if(u)owner=u.uid;}catch(e){}
+      const id=await Store.createSurvey({name,criteria,key,owner});
       mySave(id,key,name);
       showLink(id,name,key);
     }catch(e){
@@ -390,32 +408,22 @@ function renderCreate(){
   function showLink(id,name,key){
     submit.style.display="none";
     const url=location.origin+location.pathname+"?id="+id;
-    const rUrl=resultsUrl(id,key);
     linkOut.innerHTML="";
     linkOut.appendChild(h(`<div class="card">
       ${id.startsWith("loc_")?`<div class="msg err">⚠️ Sunucuya bağlanılamadı — bu link yalnızca bu cihazda çalışır. Reklam engelleyici Firebase'i engelliyor olabilir; kapatıp tekrar dene.</div>`:""}
-      <div class="msg ok">✓ Anketin hazır! Bu linki arkadaşlarına at.</div>
+      <div class="msg ok">✓ Anketin hazır! Tek link: arkadaşların açınca anket, sen açınca sonuçlar gelir.</div>
       <div class="linkbox">
         <input class="inp" id="shareUrl" readonly value="${esc(url)}">
         <button class="btn sec" id="copyBtn" style="width:auto;padding:11px 16px">Kopyala</button>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
         <button class="btn sec" id="waBtn" style="flex:1">WhatsApp'ta paylaş</button>
+        <a class="btn data" style="flex:1;text-decoration:none" href="${esc(url)}">Sonuçlarını gör →</a>
       </div>
-      <div class="subtle" style="margin-top:16px">Sonuçlar linkin (sadece sende kalsın)</div>
-      <p class="hint" style="margin:2px 0 8px">Kim katıldı, kaç aldı, ne cevap verdi — hepsini bu linkte görürsün. Bu cihazda otomatik hatırlanır.</p>
-      <div class="linkbox" style="margin-top:0">
-        <input class="inp" id="resUrl" readonly value="${esc(rUrl)}">
-        <button class="btn sec" id="copyRes" style="width:auto;padding:11px 16px">Kopyala</button>
-      </div>
-      <a class="btn data" style="text-decoration:none;margin-top:12px" href="${esc(rUrl)}">Sonuçlar sayfanı aç →</a>
+      <p class="hint" style="margin:10px 0 0">Sonuçlarda kim katıldı, kaç aldı, ne cevap verdi — hepsini görürsün. Kurucu olarak bu cihazda otomatik tanınırsın; Google girişliysen diğer cihazlarında da.</p>
     </div>`));
     linkOut.querySelector("#copyBtn").addEventListener("click",function(){
       const i=linkOut.querySelector("#shareUrl"); i.select();
-      navigator.clipboard&&navigator.clipboard.writeText(i.value); this.textContent="Kopyalandı ✓";
-    });
-    linkOut.querySelector("#copyRes").addEventListener("click",function(){
-      const i=linkOut.querySelector("#resUrl"); i.select();
       navigator.clipboard&&navigator.clipboard.writeText(i.value); this.textContent="Kopyalandı ✓";
     });
     linkOut.querySelector("#waBtn").addEventListener("click",()=>{
@@ -556,11 +564,6 @@ async function renderRespond(id){
     <p class="lede"><b>${esc(survey.name)}</b> kendi kriterlerini belirledi. Kendi özelliklerini gir, uyumunu ve liderlik tablosunu gör.</p>
   </div>`));
 
-  // Anketi bu cihazda oluşturan kişiye sonuçlar kısayolu
-  const mine=myList()[id];
-  if(mine){
-    app.appendChild(h(`<a class="msg ok" style="display:block;text-decoration:none;font-weight:700" href="${esc(resultsUrl(id,mine.key))}">👑 Bu anket senin — katılımcıları, skorları ve cevapları gör →</a>`));
-  }
 
   if(done){ showResult(done.score,done.name,true); return; }
 
@@ -706,11 +709,12 @@ async function renderResults(id,k){
     return;
   }
   const mine=myList()[id];
-  const okKey=!survey.key || k===survey.key || (mine&&mine.key===survey.key);
+  let gu=null; try{ gu=await Store.getUser(); }catch(e){}
+  const okKey=!survey.key || k===survey.key || (mine&&mine.key===survey.key) || (gu&&survey.owner&&gu.uid===survey.owner);
   if(!okKey){
     app.innerHTML="";
     app.appendChild(h(`<div class="top"><h1>Bu sayfa anketin sahibine özel</h1>
-      <p class="lede">Katılımcı listesi ve cevaplar yalnızca sonuçlar linkiyle görülür. Anketi sen oluşturduysan, oluştururken verilen "Sonuçlar linki"ni kullan.</p></div>`));
+      <p class="lede">Katılımcı listesi ve cevaplar yalnızca kurucuya görünür. Anketi sen oluşturduysan, linki oluşturduğun cihazdan ya da Google girişi yaptığın bir cihazdan aç.</p></div>`));
     app.appendChild(h(`<a class="btn" style="text-decoration:none" href="${esc(location.origin+location.pathname+"?id="+id)}">Ankete katıl →</a>`));
     return;
   }
@@ -724,9 +728,10 @@ async function renderResults(id,k){
     <p class="lede">Kim katıldı, yüzde kaç aldı, hangi cevabı verdi — hepsi burada. Bir katılımcıya dokununca cevapları açılır.</p>
   </div>`));
   const shareCard=h(`<div class="card">
-    <div class="subtle" style="margin-top:0">Katılım linki — arkadaşlarına at</div>
+    <div class="subtle" style="margin-top:0">Anket linkin — arkadaşlarına at</div>
     <div class="linkbox"><input class="inp" id="shareUrl" readonly value="${esc(shareUrl)}">
     <button class="btn sec" id="copyBtn" style="width:auto;padding:11px 16px">Kopyala</button></div>
+    <p class="hint" style="margin:8px 0 0">Arkadaşların bu linkte anketi cevaplar; sen açınca burası (sonuçlar) açılır. <a href="${esc(shareUrl+"&katil=1")}">Ankete kendin de katılmak istersen →</a></p>
   </div>`);
   app.appendChild(shareCard);
   shareCard.querySelector("#copyBtn").addEventListener("click",function(){
