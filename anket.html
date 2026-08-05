@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Anket Oluştur — Kriterin</title>
+<title>Anket Oluştur, Kriterin</title>
 <meta name="description" content="Kendi kriterlerinden anketini oluştur, arkadaşlarına link at; ne kadar uyduklarını ve liderlik tablosunu gör.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Kriterin">
-<meta property="og:title" content="Anket Oluştur — Kriterin">
+<meta property="og:title" content="Anket Oluştur, Kriterin">
 <meta property="og:description" content="Kendi kriterlerinden anketini oluştur, arkadaşlarına link at; ne kadar uyduklarını ve liderlik tablosunu gör.">
 <meta property="og:image" content="https://kriterin.com/og-v2.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -160,7 +160,7 @@ const CRITERIA=[
   {id:"irk",title:"Etnik köken",type:"multi",options:[{v:"turk",l:"Türk"},{v:"kurt",l:"Kürt"},{v:"zaza",l:"Zaza"},{v:"arap",l:"Arap"},{v:"cerkez",l:"Çerkez"},{v:"bosnak",l:"Boşnak"},{v:"laz",l:"Laz"},{v:"arnavut",l:"Arnavut"},{v:"gurcu",l:"Gürcü"},{v:"roman",l:"Roman"},{v:"diger",l:"Diğer"}]},
   {id:"din",title:"Din",type:"multi",options:[{v:"musluman",l:"Müslüman"},{v:"deist",l:"Deist"},{v:"agnostik",l:"Agnostik"},{v:"ateist",l:"Ateist"},{v:"musevi",l:"Musevi"},{v:"diger",l:"Diğer"}]},
   {id:"egitim",title:"Eğitim durumu",type:"multi",hint:"Devam edilen okulu değil, en son mezun olunan okulu seçin.",options:[{v:"yok",l:"Okul bitirmemiş"},{v:"ilk",l:"İlkokul"},{v:"orta",l:"Ortaokul"},{v:"lise",l:"Lise"},{v:"onlisans",l:"Ön lisans"},{v:"lisans",l:"Lisans"},{v:"yl",l:"Yüksek lisans"},{v:"dr",l:"Doktora"}]},
-  {id:"maas",title:"Aylık maaş",type:"multi",options:[{v:"m1",l:"28.072 ₺ ve altı"},{v:"m2",l:"28.073–42.108 ₺"},{v:"m3",l:"42.109–56.144 ₺"},{v:"m4",l:"56.145–84.216 ₺"},{v:"m5",l:"84.217–112.288 ₺"},{v:"m6",l:"112.289–127.000 ₺"},{v:"m7",l:"127.001 ₺ ve üstü"}]},
+  {id:"maas",title:"Aylık maaş",type:"multi",options:[{v:"m1",l:"28.072 ₺ ve altı"},{v:"m2",l:"28.073 ile 42.108 ₺"},{v:"m3",l:"42.109 ile 56.144 ₺"},{v:"m4",l:"56.145 ile 84.216 ₺"},{v:"m5",l:"84.217 ile 112.288 ₺"},{v:"m6",l:"112.289 ile 127.000 ₺"},{v:"m7",l:"127.001 ₺ ve üstü"}]},
   {id:"sigara",title:"Sigara",type:"single",options:[{v:"evet",l:"İçiyor",lc:"İçsin",lr:"İçiyorum"},{v:"hayir",l:"İçmiyor",lc:"İçmesin",lr:"İçmiyorum"}]},
   {id:"alkol",title:"Alkol",type:"single",options:[{v:"evet",l:"İçiyor",lc:"İçsin",lr:"İçiyorum"},{v:"hayir",l:"İçmiyor",lc:"İçmesin",lr:"İçmiyorum"}]},
   {id:"vucut",title:"Vücut tipi",type:"multi",options:[{v:"zayif",l:"Zayıf"},{v:"normal",l:"Normal"},{v:"atletik",l:"Atletik / kaslı"},{v:"kilolu",l:"Kilolu"},{v:"obez",l:"Obez"}]},
@@ -176,7 +176,9 @@ function optLabel(o,persp){return (persp==="c"&&o.lc)||(persp==="r"&&o.lr)||o.l;
 
 /* ============ Store: Firestore öncelikli, offline'da localStorage ============ */
 const Store=(function(){
-  let db=null,fs=null,ready=false,userP=Promise.resolve(null);
+  let db=null,fs=null,ready=false,am=null,auth=null,curUser=null;
+  let authReadyRes; const authReady=new Promise(r=>authReadyRes=r);
+  const userSubs=[];
   async function init(){
     try{
       const app=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
@@ -184,18 +186,15 @@ const Store=(function(){
       const cfg={apiKey:"AIzaSyD_MIekQmU9wOtam8vrckMyhgjHKD_ZR9o",authDomain:"kriterin.firebaseapp.com",projectId:"kriterin",storageBucket:"kriterin.firebasestorage.app",messagingSenderId:"46765593126",appId:"1:46765593126:web:25738b3ebc5f1168f0cce7"};
       const a=app.initializeApp(cfg,"anket");
       db=store.getFirestore(a); fs=store; ready=true;
-      // Günün Sorusu'nda Google ile giriş yapan kullanıcıyı tanı (aynı proje, aynı oturum)
-      userP=(async()=>{
-        try{
-          const am=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
-          const auth=am.getAuth(a);
-          return await new Promise(res=>{
-            const t=setTimeout(()=>res(null),3000);
-            am.onAuthStateChanged(auth,u=>{clearTimeout(t);res(u||null);},()=>{clearTimeout(t);res(null);});
-          });
-        }catch(e){return null;}
-      })();
-    }catch(e){ ready=false; } // offline/önizleme → localStorage
+      // Google girişi (Günün Sorusu ile aynı proje/oturum)
+      try{
+        am=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+        auth=am.getAuth(a);
+        let first=true;
+        am.onAuthStateChanged(auth,u=>{ curUser=u?{uid:u.uid,name:u.displayName,email:u.email}:null; if(first){first=false;authReadyRes();} userSubs.forEach(cb=>{try{cb(curUser)}catch(e){}}); },()=>{ if(first){first=false;authReadyRes();} });
+        setTimeout(()=>authReadyRes(),3000);
+      }catch(e){ authReadyRes(); }
+    }catch(e){ ready=false; authReadyRes(); } // offline/önizleme → localStorage
   }
   const initP=init();
   // localStorage fallback helpers
@@ -203,8 +202,12 @@ const Store=(function(){
   function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
   function rid(){return Math.random().toString(36).slice(2,9)}
   return {
-    async getUser(){ await initP; return userP; },
+    async getUser(){ await initP; await authReady; return curUser; },
     async online(){ await initP; return ready; },
+    canAuth(){ return !!(am&&auth); },
+    onUser(cb){ userSubs.push(cb); initP.then(()=>authReady).then(()=>cb(curUser)); },
+    async signIn(){ await initP; if(!am||!auth)throw new Error("auth yok"); return am.signInWithPopup(auth,new am.GoogleAuthProvider()); },
+    async signOut(){ await initP; if(am&&auth)return am.signOut(auth); },
     async createSurvey(data){
       await initP;
       if(ready){
@@ -271,7 +274,7 @@ function h(html){const t=document.createElement("template");t.innerHTML=html.tri
 
 /* ============ skor hesabı ============
    Her soru 5 puan üzerinden: doğru şık 5, yanlış şık 0.
-   Alınan puan = pts(0–5) × ağırlık.  Tavan = 5 × ağırlık.
+   Alınan puan = pts(0 ile 5) × ağırlık.  Tavan = 5 × ağırlık.
    Boy: aralık dışında her `step` cm (2) için 1 puan düşer.
    Yaş: aralık dışında her `step` yaş (1) için 1 puan düşer.
    Uyum % = Σ(alınan) / Σ(tavan) × 100
@@ -311,6 +314,7 @@ function mySave(id,key,name){try{const m=myList();m[id]={key:key||"",name:name||
 function myRemove(id){try{const m=myList();delete m[id];localStorage.setItem("kriterin_anket_mine",JSON.stringify(m))}catch(e){}}
 /* Paylaşım: kullanıcı istediği mecrayı seçer (X en başta), mesaj sabittir */
 const SHARE_MSG="Kriterlerime ne kadar uyuyorsun? Aşağıdaki linkten hemen test et. Sıralamadaki yerini al.";
+const SOCIAL_HTML='<style>.xfollow-wrap{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:16px 0 4px}.xfollow{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;border-radius:10px;border:1px solid var(--accent);background:var(--surface);color:var(--accent);text-decoration:none;font-weight:700;font-size:13px;letter-spacing:-.01em}.xfollow:hover{background:var(--accent);color:#fff}.xfollow svg{width:15px;height:15px;fill:currentColor;flex:none}.xfollow b{font-weight:800}</style><div class="xfollow-wrap"><a class="xfollow" href="https://x.com/kriterincom" target="_blank" rel="noopener" aria-label="Kriterin\'i X\'te takip et"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> <span><b>@kriterincom</b></span></a><a class="xfollow" href="https://www.tiktok.com/@kriterincom" target="_blank" rel="noopener" aria-label="Kriterin\'i TikTok\'ta takip et"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.08-.14 1.62.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg> <span><b>@kriterincom</b></span></a></div>';
 function shareMenu(url){
   const full=SHARE_MSG+"\n"+url, enc=encodeURIComponent;
   const wrap=h(`<div>
@@ -414,6 +418,35 @@ function renderCreate(){
     app.appendChild(card);
   }
 
+  // Google giriş kartı (isteğe bağlı), anket ismi kutusunun üstünde
+  const authCard=h(`<div class="card" data-auth style="display:none">
+    <div data-signin>
+      <div class="subtle" style="margin-top:0">Google ile giriş (isteğe bağlı)</div>
+      <p class="hint" style="margin:0 0 10px">Giriş yaparsan anketinin sonuçlarına her cihazından ulaşırsın.</p>
+      <button type="button" class="btn sec" id="gLogin" style="display:flex;align-items:center;gap:10px">
+        <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.4 5.4 2.6 13.2l7.8 6.1C12.2 13.6 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.1-3.8 6.5-9.4 6.5-16z"/><path fill="#FBBC05" d="M10.4 28.3c-.5-1.4-.8-2.9-.8-4.3s.3-3 .8-4.3l-7.8-6.1C1 16.5 0 20.1 0 24s1 7.5 2.6 10.4l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.6l-7.1-5.5c-2 1.3-4.6 2.1-8.2 2.1-6.4 0-11.8-4.1-13.6-9.8l-7.8 6.1C6.4 42.6 14.6 48 24 48z"/></svg>
+        Google ile giriş yap
+      </button>
+    </div>
+    <div data-signed style="display:none">
+      <div class="msg ok" style="margin:0"><b data-gname></b> olarak giriş yaptın. <a href="#" id="gLogout" style="font-weight:600">çıkış</a></div>
+    </div>
+  </div>`);
+  app.appendChild(authCard);
+  authCard.querySelector("#gLogin").addEventListener("click",async()=>{ try{await Store.signIn();}catch(e){alert("Giriş yapılamadı, tekrar dene.");} });
+  authCard.querySelector("#gLogout").addEventListener("click",(e)=>{ e.preventDefault(); Store.signOut(); });
+  Store.onUser(u=>{
+    if(!Store.canAuth()){ authCard.style.display="none"; return; }
+    authCard.style.display="block";
+    authCard.querySelector("[data-signin]").style.display=u?"none":"block";
+    authCard.querySelector("[data-signed]").style.display=u?"block":"none";
+    if(u){
+      authCard.querySelector("[data-gname]").textContent=u.name||"Google hesabı";
+      const so=nameCard&&nameCard.querySelector("#sowner");
+      if(so&&!so.value&&u.name)so.value=String(u.name).trim().slice(0,24);
+    }
+  });
+
   const nameCard=h(`<div class="card">
     <div class="field">
       <label for="sname">Anketine bir isim ver</label>
@@ -423,7 +456,7 @@ function renderCreate(){
     <div class="field" style="margin:0">
       <label for="sowner">Adın</label>
       <input class="inp" id="sowner" maxlength="24" placeholder="Örn: Ayşe">
-      <p class="hint">Sonuç ekranında "… kendi kriterlerini belirledi" diye görünür.</p>
+      <p class="hint">Sonuç ekranında "kendi kriterlerini belirledi" diye görünür.</p>
     </div>
   </div>`);
   app.appendChild(nameCard);
@@ -491,7 +524,7 @@ function renderCreate(){
     }
     if(!name) return fail("Anketine bir isim ver.");
     if(!ownerName) return fail("Adını yaz.");
-    if(criteria.length<2) return fail("En az 2 kriter seç. Anket daha anlamlı olur.");
+    if(criteria.length<1) return fail("En az 1 kriter seç.");
 
     submit.disabled=true; submit.innerHTML='<span class="spin" style="width:16px;height:16px;border-width:2px"></span> Oluşturuluyor…';
     try{
@@ -514,11 +547,11 @@ function renderCreate(){
     const url=location.origin+location.pathname+"?id="+id;
     linkOut.innerHTML="";
     linkOut.appendChild(h(`<div class="card">
-      ${id.startsWith("loc_")?`<div class="msg err">⚠️ Sunucuya bağlanılamadı — bu link yalnızca bu cihazda çalışır. Reklam engelleyici Firebase'i engelliyor olabilir; kapatıp tekrar dene.</div>`:""}
+      ${id.startsWith("loc_")?`<div class="msg err">⚠️ Sunucuya bağlanılamadı, bu link yalnızca bu cihazda çalışır. Reklam engelleyici Firebase'i engelliyor olabilir; kapatıp tekrar dene.</div>`:""}
       <div class="msg ok">✓ Anketin hazır! Tek link: arkadaşların açınca anket, sen açınca sonuçlar gelir.</div>
       <div data-share style="margin-top:12px"></div>
       <a class="btn sec" style="text-decoration:none;margin-top:8px" href="${esc(url)}">Sonuçlarını gör →</a>
-      <p class="hint" style="margin:10px 0 0">Sonuçlarda kim katıldı, kaç aldı, ne cevap verdi — hepsini görürsün. Kurucu olarak bu cihazda otomatik tanınırsın; Google girişliysen diğer cihazlarında da.</p>
+      <p class="hint" style="margin:10px 0 0">Sonuçlarda kim katıldı, kaç aldı, ne cevap verdi; hepsini görürsün. Kurucu olarak bu cihazda otomatik tanınırsın; Google girişliysen diğer cihazlarında da.</p>
       <div style="margin-top:14px"><!-- sosyal medya takip --><style>.xfollow-wrap{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:16px 0 4px}.xfollow{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;border-radius:10px;border:1px solid var(--accent);background:var(--surface);color:var(--accent);text-decoration:none;font-weight:700;font-size:13px;letter-spacing:-.01em;transition:background .15s,color .15s}.xfollow:hover{background:var(--accent);color:#fff}.xfollow svg{width:15px;height:15px;fill:currentColor;flex:none}.xfollow b{font-weight:800}</style><div class="xfollow-wrap"><a class="xfollow" href="https://x.com/kriterincom" target="_blank" rel="noopener" aria-label="Kriterin'i X'te takip et"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> <span><b>@kriterincom</b></span></a><a class="xfollow" href="https://www.tiktok.com/@kriterincom" target="_blank" rel="noopener" aria-label="Kriterin'i TikTok'ta takip et"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.08-.14 1.62.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg> <span><b>@kriterincom</b></span></a></div></div>
     </div>`));
     linkOut.querySelector("[data-share]").appendChild(shareMenu(url));
@@ -558,7 +591,7 @@ function buildCritEditor(c,st){
       <div class="subtle">Aradığın aralık</div>
       <div class="rangepick">
         <input class="inp num" type="number" min="${c.min}" max="${c.max}" value="${st.min}" id="rmin">
-        <span>—</span>
+        <span></span>
         <input class="inp num" type="number" min="${c.min}" max="${c.max}" value="${st.max}" id="rmax">
         <span>${esc(c.unit)}</span>
       </div>
@@ -665,14 +698,19 @@ async function renderRespond(id){
   </div>`));
 
 
-  if(done){ showResult(done.score,done.name,true); return; }
+  if(done){
+    app.innerHTML="";
+    app.appendChild(h(`<div class="top"><div class="eyebrow">${esc(survey.name)}</div></div>`));
+    showResult(done.score,done.name,true);
+    return;
+  }
 
   // Google ile giriş yapmışsa (Günün Sorusu'ndan) takma ad sorulmaz, Google adı kullanılır
   let gUser=null; try{ gUser=await Store.getUser(); }catch(e){}
-  const gName=gUser&&gUser.displayName?String(gUser.displayName).trim().slice(0,24):"";
+  const gName=gUser&&gUser.name?String(gUser.name).trim().slice(0,24):"";
   let nameCard=null;
   if(gName){
-    app.appendChild(h(`<div class="msg ok" style="margin:0 0 4px">Merhaba <b>${esc(gName)}</b> — liderlik tablosunda bu isimle görüneceksin.</div>`));
+    app.appendChild(h(`<div class="msg ok" style="margin:0 0 4px">Merhaba <b>${esc(gName)}</b>, liderlik tablosunda bu isimle görüneceksin.</div>`));
   }else{
     nameCard=h(`<div class="card"><div class="field" style="margin:0">
       <label for="rname">Takma adın</label>
@@ -702,25 +740,22 @@ async function renderRespond(id){
     }
     if(!name){ err.textContent="Takma adını yaz."; err.style.display="block"; return; }
     const {score}=computeScore(survey,answers);
-    // Cevaplar da kaydedilir — kurucu sonuçlar sayfasında görebilsin
+    // Cevaplar da kaydedilir, kurucu sonuçlar sayfasında görebilsin
     const cleanAns={};
     for(const c of survey.criteria){ cleanAns[c.id]=String(answers[c.id]).slice(0,60); }
     submit.disabled=true; submit.innerHTML='<span class="spin" style="width:16px;height:16px;border-width:2px"></span>';
     try{
       await Store.addResponse(id,{name,score,answers:cleanAns});
     }catch(e){
-      // Kayıt başarısız: sahte başarı gösterme — kullanıcı tekrar deneyebilsin
+      // Kayıt başarısız: sahte başarı gösterme, kullanıcı tekrar deneyebilsin
       submit.disabled=false; submit.textContent="Uyumumu hesapla";
-      err.textContent="Cevabın kaydedilemedi — liderlik tablosuna eklenemedin. İnternetini kontrol edip tekrar dene.";
+      err.textContent="Cevabın kaydedilemedi, liderlik tablosuna eklenemedin. İnternetini kontrol edip tekrar dene.";
       err.style.display="block"; err.scrollIntoView({behavior:"smooth",block:"center"});
       return;
     }
     try{ localStorage.setItem(alreadyKey,JSON.stringify({score,name})); }catch(e){}
     app.innerHTML="";
-    app.appendChild(h(`<div class="top">
-      <div class="eyebrow">Anket</div>
-      <h1>${esc(survey.name)}</h1>
-      <p class="lede"><b>${esc(creator||survey.name)}</b> kendi kriterlerini belirledi.</p></div>`));
+    app.appendChild(h(`<div class="top"><div class="eyebrow">${esc(survey.name)}</div></div>`));
     showResult(score,name,false);
   });
 
@@ -758,12 +793,12 @@ async function renderRespond(id){
     return el;
   }
 
-  /* Puan dökümü bilerek gösterilmiyor — katılımcı neyden puan aldığını görmez.
+  /* Puan dökümü bilerek gösterilmiyor, katılımcı neyden puan aldığını görmez.
      Sadece toplam % + liderlik tablosu. */
   async function showResult(score,name,revisit){
     const res=h(`<div class="card">
       <div class="result-ring"><div class="big">${fmtScore(score)}<small>%</small></div>
-      <div class="mini">${name?esc(name)+" · ":""}${esc(survey.name)} ile uyumun</div></div>
+      <div class="mini">${esc(creator||survey.name)} ile uyumun</div></div>
       <div class="subtle" style="margin-top:10px">Liderlik Tablosu</div>
       <div data-panel><div class="center" style="padding:24px 0"><span class="spin"></span></div></div>
     </div>`);
@@ -780,7 +815,7 @@ async function renderRespond(id){
         const me=(r.name===name&&Math.round(r.score*10)===Math.round(score*10));
         wrap.appendChild(h(`<div class="lb-row ${i===0?"top1":""} ${me?"me":""}">
           <span class="lb-rank">${i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1)}</span>
-          <span class="lb-name">${esc(r.name||"—")}</span>
+          <span class="lb-name">${esc(r.name||"?")}</span>
           <span class="lb-score">%${fmtScore(r.score)}</span>
         </div>`));
       });
@@ -798,14 +833,15 @@ async function renderRespond(id){
     }
     await loadRows();
     app.appendChild(h(`<a class="btn data" style="margin-top:14px;text-decoration:none" href="/anket.html">Kendi anketini yap →</a>`));
+    app.appendChild(h(`<div style="margin-top:14px">${SOCIAL_HTML}</div>`));
     if(revisit){
-      app.insertBefore(h(`<div class="msg ok">Bu ankete daha önce katıldın — sonucun ve liderlik tablosu aşağıda.</div>`),res);
+      app.insertBefore(h(`<div class="msg ok">Bu ankete daha önce katıldın, sonucun ve liderlik tablosu aşağıda.</div>`),res);
     }
   }
 }
 
 /* =========================================================
-   SONUÇLAR MODU (sadece kurucu — ?id=X&k=ANAHTAR)
+   SONUÇLAR MODU (sadece kurucu, ?id=X&k=ANAHTAR)
    Katılımcılar, skorları ve verdikleri cevaplar.
 ========================================================= */
 async function renderResults(id,k){
@@ -833,10 +869,10 @@ async function renderResults(id,k){
   app.appendChild(h(`<div class="top">
     <div class="eyebrow">Sonuçlar · sadece sen görüyorsun</div>
     <h1>${esc(survey.name)}</h1>
-    <p class="lede">Kim katıldı, yüzde kaç aldı, hangi cevabı verdi — hepsi burada. Bir katılımcıya dokununca cevapları açılır.</p>
+    <p class="lede">Kim katıldı, yüzde kaç aldı, hangi cevabı verdi, hepsi burada. Bir katılımcıya dokununca cevapları açılır.</p>
   </div>`));
   const shareCard=h(`<div class="card">
-    <div class="subtle" style="margin-top:0">Anket linkin — arkadaşlarına at</div>
+    <div class="subtle" style="margin-top:0">Anket linkin, arkadaşlarına at</div>
     <div class="linkbox"><input class="inp" id="shareUrl" readonly value="${esc(shareUrl)}"></div>
     <div data-share style="margin-top:12px"></div>
     <p class="hint" style="margin:8px 0 0">Arkadaşların bu linkte anketi cevaplar; sen tıkladığında sonuçları görürsün.</p>
@@ -846,7 +882,7 @@ async function renderResults(id,k){
 
   const board=h(`<div class="card">
     <div style="display:flex;align-items:center;gap:10px">
-      <div class="subtle" style="margin:0;flex:1">Katılımcılar · <span data-count>—</span></div>
+      <div class="subtle" style="margin:0;flex:1">Katılımcılar · <span data-count></span></div>
       <button class="btn sec" data-refresh style="width:auto;padding:8px 14px;font-size:13px">Yenile</button>
     </div>
     <div data-rows style="margin-top:8px"></div>
@@ -880,7 +916,7 @@ async function renderResults(id,k){
       box.appendChild(h(`<details class="rdet">
         <summary>
           <span class="lb-rank">${i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1)}</span>
-          <span class="lb-name">${esc(r.name||"—")}</span>
+          <span class="lb-name">${esc(r.name||"?")}</span>
           <span class="lb-score">%${fmtScore(r.score)}</span>
           <span class="exp">▶</span>
         </summary>
@@ -896,7 +932,7 @@ async function renderResults(id,k){
       rowsEl.innerHTML="";
       const retry=h(`<div><p class="mini center" style="padding:10px 0 6px">Katılımcılar yüklenemedi.</p><button class="btn sec" style="margin-bottom:4px">Tekrar dene</button></div>`);
       retry.querySelector("button").addEventListener("click",load);
-      rowsEl.appendChild(retry); countEl.textContent="—";
+      rowsEl.appendChild(retry); countEl.textContent=",";
       return;
     }
     paint(rows);
