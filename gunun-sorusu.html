@@ -227,10 +227,11 @@ input[type=text]:focus{border-color:var(--accent)}
     {q:"Türkiye'de kişi başı yılda kaç kg ekmek tüketilir? (tahmini)", a:100, u:"kg", s:"sektör tahmini"},
     {q:"Bir futbol sahası kaç metre uzunluğundadır? (ortalama)", a:105, u:"m", s:"FIFA standardı"},
     {q:"Türkiye'de kaç il var?", a:81, u:"il", s:"resmî"},
-    {q:"Türkiye'de sevgilisinin/eşinin telefon şifresini bilmeyi \"ilişkide şeffaflık kriteri\" olarak görenlerin oranı yüzde kaçtır?", a:67, u:"%", s:"Ipsos, İlişkilerde Dijital Mahremiyet Araştırması"}
+    {q:"Türkiye'de sevgilisinin/eşinin telefon şifresini bilmeyi \"ilişkide şeffaflık kriteri\" olarak görenlerin oranı yüzde kaçtır?", a:67, u:"%", s:"Ipsos, İlişkilerde Dijital Mahremiyet Araştırması"},
+    {q:"Flört uygulamalarında erkeklerin kadın profilini sağa kaydırma oranı ile kadınların erkek profilini sağa kaydırma oranı arasındaki fark yüzde kaçtır?", a:32, u:"%", s:"Worst-Case / Online Dating Behavioral Data Analysis", note:"Erkekler %46, Kadınlar ise sadece %14 oranında sağa kaydırıyor."}
   ];
   // Belirli günlere özel soru: tarih (y-a-g) → Q indeksi
-  var OVERRIDE = { "2026-8-5": Q.length-1 };
+  var OVERRIDE = { "2026-8-5": Q.length-2, "2026-8-6": Q.length-1 };
 
   var LS = { nick:'kriterin_nick', game:'kriterin_gunun_soru', theme:'kriterin_tema', history:'kriterin_gs_history' };
   var MAX = 5;
@@ -335,6 +336,7 @@ input[type=text]:focus{border-color:var(--accent)}
       var rb=document.getElementById('revealBox');
       rb.innerHTML='Doğru cevap: <b>'+fmt(today.a)+' '+today.u+'</b>'
         +(today.real?(' <span class="src">(gerçek ≈ '+today.real+' '+today.u+')</span>'):'')
+        +(today.note?('<div style="margin-top:8px;font-weight:600;color:var(--ink)">'+today.note+'</div>'):'')
         +'<div class="src">Kaynak: '+today.s+'</div>';
       startCountdown();
     } else {
@@ -344,20 +346,32 @@ input[type=text]:focus{border-color:var(--accent)}
     }
   }
 
+  // Geçmişten (tüm cihaz+hesap birleşik) tüm istatistikleri hesapla
+  function computeStats(h){
+    var keys=Object.keys(h||{});
+    var nums=keys.map(keyNum).sort(function(a,b){return a-b}), setN={};
+    nums.forEach(function(n){setN[n]=1});
+    var total=keys.length, solvedCount=0, triesSum=0, msSum=0, lastKey='', lastNum=-Infinity;
+    keys.forEach(function(k){ var kn=keyNum(k); if(kn>lastNum){lastNum=kn;lastKey=k;} if(h[k].solved){solvedCount++;triesSum+=(h[k].tries||5);msSum+=(h[k].ms||0);} });
+    var best=nums.length?1:0,run=1,i;
+    for(i=1;i<nums.length;i++){ if(nums[i]===nums[i-1]+1){run++;if(run>best)best=run;} else {run=1;} }
+    var todayNum=Math.floor(now.getTime()/86400000), start=setN[todayNum]?todayNum:(setN[todayNum-1]?todayNum-1:null), cur=0;
+    if(start!=null){ var kk=start; while(setN[kk]){cur++;kk--;} }
+    return { totalDays:total, solvedCount:solvedCount, totalTries:triesSum, solveMsSum:msSum,
+      bestStreak:best, streak:cur, lastDate:lastKey, eligible:total>=10,
+      avgTries: solvedCount?Math.round(triesSum/solvedCount*100)/100:null,
+      avgSolveMs: solvedCount?Math.round(msSum/solvedCount):null,
+      rate: total?Math.round(solvedCount/total*100):0 };
+  }
   function renderStats(){
     var h=loadHistory(), keys=Object.keys(h), card=document.getElementById('statsCard');
     if(!keys.length){card.classList.add('hidden');return;}
     card.classList.remove('hidden');
+    var st=computeStats(h);
     var nums=keys.map(keyNum).sort(function(a,b){return a-b}), setN={};
     nums.forEach(function(n){setN[n]=1});
-    var total=keys.length, solvedCount=0, triesSum=0;
-    keys.forEach(function(k){if(h[k].solved){solvedCount++;triesSum+=(h[k].tries||5);}});
-    var rate=Math.round(solvedCount/total*100);
-    var avg=solvedCount?(triesSum/solvedCount):null;
-    var best=1,run=1,i;
-    for(i=1;i<nums.length;i++){ if(nums[i]===nums[i-1]+1){run++;if(run>best)best=run;} else {run=1;} }
-    var todayNum=Math.floor(now.getTime()/86400000), start=setN[todayNum]?todayNum:todayNum-1, cur=0,kk=start;
-    while(setN[kk]){cur++;kk--;}
+    var total=st.totalDays, cur=st.streak, best=st.bestStreak, rate=st.rate, avg=st.avgTries;
+    var todayNum=Math.floor(now.getTime()/86400000);
     document.getElementById('stTotal').textContent=total;
     document.getElementById('stCur').textContent=cur;
     document.getElementById('stBest').textContent=best;
@@ -398,7 +412,7 @@ input[type=text]:focus{border-color:var(--accent)}
     if(guess===today.a){ state.solved=true; state.done=true; state.solveMs=Math.max(0,Date.now()-(state.startedAt||Date.now())); }
     else if(state.guesses.length>=MAX){ state.done=true; }
     set(LS.game, JSON.stringify(state));
-    if(state.done){ var hh=loadHistory(); hh[todayKey]={solved:state.solved,tries:state.guesses.length,ms:state.solveMs||0}; saveHistory(hh); try{window.dispatchEvent(new CustomEvent('kb-done'))}catch(e){} }
+    if(state.done){ var hh=loadHistory(); hh[todayKey]={solved:state.solved,tries:state.guesses.length,ms:state.solveMs||0}; saveHistory(hh); try{window.dispatchEvent(new CustomEvent('kb-done'))}catch(e){} syncServer(); }
     document.getElementById('guessInput').value='';
     renderGame(); renderStats();
   });
@@ -416,13 +430,48 @@ input[type=text]:focus{border-color:var(--accent)}
 
   if(nick){showGame();}else{document.getElementById('nickInput').focus();}
 
+  // ===== İki yönlü Google senkronu: sunucudaki gün-gün geçmişle birleştir =====
+  var gUser=null, syncing=false;
+  function pickEntry(a,b){ // aynı gün iki kayıt: çözüleni ve az tahminliyi tut
+    if(b.solved && !a.solved) return b;
+    if(a.solved && !b.solved) return a;
+    if(a.solved && b.solved) return ((b.tries||5)<(a.tries||5))?b:a;
+    return a;
+  }
+  function mergeHistory(server, local){
+    var m={},k;
+    for(k in server) if(Object.prototype.hasOwnProperty.call(server,k)) m[k]=server[k];
+    for(k in local) if(Object.prototype.hasOwnProperty.call(local,k)) m[k]=m[k]?pickEntry(m[k],local[k]):local[k];
+    return m;
+  }
+  function syncServer(){
+    if(syncing || !(gUser && window.KB && KB.getMine && KB.save)) return;
+    syncing=true;
+    KB.getMine().then(function(d){
+      var server=(d&&d.history)||{};
+      var merged=mergeHistory(server, loadHistory());
+      saveHistory(merged); renderStats();
+      var st=computeStats(merged);
+      var name=(get(LS.nick)||'').trim()||((gUser.name||'').trim().slice(0,18))||'Oyuncu';
+      var payload={ name:name, history:merged, streak:st.streak, bestStreak:st.bestStreak,
+        totalDays:st.totalDays, solvedCount:st.solvedCount, totalTries:st.totalTries,
+        solveMsSum:st.solveMsSum, lastDate:st.lastDate, eligible:st.eligible };
+      if(st.avgTries!=null){ payload.avgTries=st.avgTries; payload.avgSolveMs=st.avgSolveMs; }
+      return KB.save(payload);
+    }).then(function(){ try{window.dispatchEvent(new CustomEvent('kb-synced'))}catch(e){} })
+      .catch(function(){}).then(function(){ syncing=false; });
+  }
+
   // Google ile giriş yapana takma ad ekranı gösterilmez, Google adı otomatik kullanılır
   window.addEventListener('kb-auth', function(e){
-    var u=e.detail;
-    if(u && !get(LS.nick)){
-      var n=(u.name||'').trim().slice(0,18)||'Oyuncu';
-      nick=n; set(LS.nick,n);
-      if(game.classList.contains('hidden')) showGame();
+    var u=e.detail; gUser=u;
+    if(u){
+      if(!get(LS.nick)){
+        var n=(u.name||'').trim().slice(0,18)||'Oyuncu';
+        nick=n; set(LS.nick,n);
+        if(game.classList.contains('hidden')) showGame();
+      }
+      syncServer();
     }
   });
 })();
@@ -451,13 +500,13 @@ input[type=text]:focus{border-color:var(--accent)}
       myName=cleanName(u.name)||'Oyuncu';
       $('meName').textContent=myName;
       $('meAv').textContent=myName.charAt(0).toUpperCase();
-      if(window.KB&&KB.getMine){ KB.getMine().then(function(d){ if(d&&d.name){myName=d.name;$('meName').textContent=myName;$('meAv').textContent=myName.charAt(0).toUpperCase();} syncIfDone(); }).catch(function(){ syncIfDone(); }); }
-      else { syncIfDone(); }
+      if(window.KB&&KB.getMine){ KB.getMine().then(function(d){ if(d&&d.name){myName=d.name;$('meName').textContent=myName;$('meAv').textContent=myName.charAt(0).toUpperCase();} }).catch(function(){}); }
     }
     loadBoards();
   }
   window.addEventListener('kb-auth', function(e){ onAuth(e.detail); });
   window.addEventListener('kb-ready', loadBoards);
+  window.addEventListener('kb-synced', loadBoards);  // oyun IIFE senkron edince tabloyu yenile
 
   $('loginBtn').addEventListener('click', function(){ if(window.KB&&KB.signIn) KB.signIn(); else alert('Giriş yalnızca canlı sitede çalışır.'); });
   $('logoutBtn').addEventListener('click', function(){ if(window.KB&&KB.signOut) KB.signOut(); });
@@ -475,17 +524,8 @@ input[type=text]:focus{border-color:var(--accent)}
     var hn=document.getElementById('hiNick'); if(hn)hn.textContent=n;
     $('nameEdit').classList.add('hidden');
     if(window.KB&&KB.setName) KB.setName(n).then(loadBoards).catch(function(){});
-    syncIfDone();
   });
   $('dispName').addEventListener('keydown',function(e){if(e.key==='Enter')$('saveName').click()});
-
-  function syncIfDone(){
-    try{ var s=JSON.parse(get(LSg)||'{}'); if(s.date===todayKey && s.done && user && window.KB&&KB.complete){
-      var disp=myName||cleanName(user.name)||'Oyuncu';
-      KB.complete(disp, !!s.solved, (s.guesses?s.guesses.length:5), todayKey, (s.solved?(s.solveMs||0):0)).then(loadBoards).catch(function(){});
-    }}catch(e){}
-  }
-  window.addEventListener('kb-done', syncIfDone);
 
   $('tabStreak').addEventListener('click', function(){ curBoard='streak'; this.classList.add('on'); $('tabTries').classList.remove('on'); loadBoards(); });
   $('tabTries').addEventListener('click', function(){ curBoard='tries'; this.classList.add('on'); $('tabStreak').classList.remove('on'); loadBoards(); });
@@ -507,7 +547,7 @@ input[type=text]:focus{border-color:var(--accent)}
         });
         body.innerHTML='<div class="lbscroll">'+html+'</div>';
       }
-      note.textContent = curBoard==='streak' ? '' : (top.length ? 'En az 10 gün oynayanlar arasında, ortalama tahmin sayısına göre (az = iyi). Eşitlikte daha kısa sürede bilen üstte.' : 'Liderlik tablosuna girebilmek için en az 10 gün oynamalısın.');
+      note.textContent = curBoard==='streak' ? '' : 'Liderlik tablosuna girebilmek için en az 10 gün oynamanız gerekir.';
     }).catch(function(){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yüklenemedi.</p>'; });
   }
 
@@ -543,21 +583,8 @@ input[type=text]:focus{border-color:var(--accent)}
       signOut: () => signOut(auth),
       getMine: async () => { if(!cur) return null; const s = await getDoc(doc(db,'players',cur.uid)); return s.exists() ? s.data() : null; },
       setName: async (name) => { if(!cur) return; await setDoc(doc(db,'players',cur.uid), { name }, { merge:true }); },
-      complete: async (name, solved, tries, todayKey, solveMs) => {
-        if(!cur) return;
-        const ref = doc(db,'players',cur.uid);
-        const snap = await getDoc(ref);
-        const d = snap.exists() ? snap.data() : { streak:0, bestStreak:0, totalDays:0, solvedCount:0, totalTries:0, solveMsSum:0, lastDate:'' };
-        if(d.lastDate === todayKey){ await setDoc(ref, { name }, { merge:true }); return; }
-        const streak = (d.lastDate === keyOffset(todayKey,-1)) ? (d.streak||0)+1 : 1;
-        const solvedCount = (d.solvedCount||0) + (solved?1:0);
-        const totalTries = (d.totalTries||0) + (solved?tries:0);
-        const solveMsSum = (d.solveMsSum||0) + (solved?(solveMs||0):0);
-        const totalDays = (d.totalDays||0)+1;
-        const payload = { name, streak, bestStreak: Math.max(d.bestStreak||0, streak), totalDays, solvedCount, totalTries, solveMsSum, lastDate: todayKey, eligible: totalDays>=10, updatedAt: serverTimestamp() };
-        if(solvedCount>0){ payload.avgTries = Math.round(totalTries/solvedCount*100)/100; payload.avgSolveMs = Math.round(solveMsSum/solvedCount); }
-        await setDoc(ref, payload, { merge:true });
-      },
+      // İki yönlü senkron: istemci geçmişi birleştirip toplamları hesaplar, burası ham yazar
+      save: async (payload) => { if(!cur) return; await setDoc(doc(db,'players',cur.uid), Object.assign({updatedAt: serverTimestamp()}, payload), { merge:true }); },
       board: async (type) => {
         const col = collection(db,'players');
         const q = (type==='tries')

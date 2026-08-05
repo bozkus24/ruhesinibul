@@ -263,6 +263,33 @@ const Store=(function(){
       }
       const d=lsGet("kriterin_anket_"+id);
       return d&&d.responses?d.responses.slice().sort((a,b)=>b.score-a.score):[];
+    },
+    // Girişte: sahipsiz eski anketi (bu cihazdan bilinen) hesabına bağla
+    async claimOwner(id){
+      await initP; if(!ready||id.startsWith("loc_"))return false;
+      await authReady; if(!curUser)return false;
+      try{
+        const {doc,getDoc,setDoc}=fs;
+        const s=await getDoc(doc(db,"surveys",id));
+        if(!s.exists())return false;
+        const d=s.data(); if(d.deleted)return false;
+        if(d.owner&&d.owner!==curUser.uid)return false;   // başkasınınsa dokunma
+        if(d.owner===curUser.uid)return true;             // zaten benim
+        await setDoc(doc(db,"surveys",id),{owner:curUser.uid},{merge:true});
+        return true;
+      }catch(e){return false;}
+    },
+    // Hesaba bağlı tüm anketleri getir (cihazlar arası liste)
+    async listMine(){
+      await initP; if(!ready)return [];
+      await authReady; if(!curUser)return [];
+      try{
+        const {collection,query,where,getDocs}=fs;
+        const qs=await getDocs(query(collection(db,"surveys"),where("owner","==",curUser.uid)));
+        const out=[];
+        qs.forEach(dd=>{const x=dd.data(); if(!x.deleted)out.push({id:dd.id,key:x.key||"",name:x.name||"Anket",at:x.createdAt||0});});
+        return out;
+      }catch(e){return [];}
     }
   };
 })();
@@ -310,7 +337,7 @@ const fmtScore=s=>{const n=Math.round(Number(s)*10)/10;return Number.isInteger(n
 
 /* ============ kurucunun anketleri (bu cihazda) ============ */
 function myList(){try{return JSON.parse(localStorage.getItem("kriterin_anket_mine")||"{}")}catch(e){return{}}}
-function mySave(id,key,name){try{const m=myList();m[id]={key:key||"",name:name||"",at:Date.now()};localStorage.setItem("kriterin_anket_mine",JSON.stringify(m))}catch(e){}}
+function mySave(id,key,name,at){try{const m=myList();const prevAt=m[id]&&m[id].at;m[id]={key:key||"",name:name||"",at:at||prevAt||Date.now()};localStorage.setItem("kriterin_anket_mine",JSON.stringify(m))}catch(e){}}
 function myRemove(id){try{const m=myList();delete m[id];localStorage.setItem("kriterin_anket_mine",JSON.stringify(m))}catch(e){}}
 /* Paylaşım: kullanıcı istediği mecrayı seçer (X en başta), mesaj sabittir */
 const SHARE_MSG="Kriterlerime ne kadar uyuyorsun? Aşağıdaki linkten hemen test et. Sıralamadaki yerini al.";
@@ -388,13 +415,17 @@ function renderCreate(){
   </div>`));
 
   // Daha önce oluşturduğu anketler (bu cihazda / hesabında)
-  const mineAll=myList();
-  const mineIds=Object.keys(mineAll).sort((a,b)=>(mineAll[b].at||0)-(mineAll[a].at||0));
-  if(mineIds.length){
+  const mineHost=h(`<div></div>`);
+  app.appendChild(mineHost);
+  const z=n=>(n<10?"0":"")+n;
+  function renderMineList(){
+    const mineAll=myList();
+    const mineIds=Object.keys(mineAll).sort((a,b)=>(mineAll[b].at||0)-(mineAll[a].at||0));
+    mineHost.innerHTML="";
+    if(!mineIds.length)return;
     const card=h(`<div class="card"><div class="subtle" style="margin-top:0">Önceki anketlerin</div><div data-rows></div></div>`);
     const rowsEl=card.querySelector("[data-rows]");
-    const z=n=>(n<10?"0":"")+n;
-    mineIds.slice(0,10).forEach(mid=>{
+    mineIds.slice(0,20).forEach(mid=>{
       const m=mineAll[mid];
       const d=m.at?new Date(m.at):null;
       const ds=d?z(d.getDate())+"."+z(d.getMonth()+1)+"."+d.getFullYear():"";
@@ -415,7 +446,20 @@ function renderCreate(){
       });
       rowsEl.appendChild(row);
     });
-    app.appendChild(card);
+    mineHost.appendChild(card);
+  }
+  renderMineList();
+  // Girişte: bu cihazdaki eski anketleri hesaba bağla + hesaba bağlı anketleri her cihazda listele
+  let anketSynced=false;
+  async function anketSync(){
+    if(anketSynced)return; anketSynced=true;
+    try{
+      const local=myList();
+      for(const id of Object.keys(local)){ if(!id.startsWith("loc_")) await Store.claimOwner(id); }
+      const server=await Store.listMine();
+      server.forEach(s=>mySave(s.id,s.key,s.name,s.at));
+      renderMineList();
+    }catch(e){ anketSynced=false; }
   }
 
   // Google giriş kartı (isteğe bağlı), anket ismi kutusunun üstünde
@@ -444,6 +488,7 @@ function renderCreate(){
       authCard.querySelector("[data-gname]").textContent=u.name||"Google hesabı";
       const so=nameCard&&nameCard.querySelector("#sowner");
       if(so&&!so.value&&u.name)so.value=String(u.name).trim().slice(0,24);
+      anketSync();  // eski anketleri hesaba bağla + diğer cihazlardakileri getir
     }
   });
 
