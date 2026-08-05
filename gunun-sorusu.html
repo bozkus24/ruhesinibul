@@ -194,7 +194,10 @@ input[type=text]:focus{border-color:var(--accent)}
       </button>
     </div>
     <div id="authIn" class="hidden">
-      <div class="me"><div class="av" id="meAv">O</div><div><b id="meName">Oyuncu</b><div class="sub">Google ile giriş yapıldı · liderlik tablosunda Google adınla görünürsün</div></div><a class="out" id="logoutBtn">çıkış</a></div>
+      <div class="me"><div class="av" id="meAv">O</div><div><b id="meName">Oyuncu</b><div class="sub">Google ile giriş yapıldı · liderlik tablosunda bu isimle görünürsün</div></div><a class="out" id="editNameBtn">ismi düzenle</a><a class="out" id="logoutBtn" style="margin-left:12px">çıkış</a></div>
+      <div id="nameEdit" class="hidden" style="margin-top:10px">
+        <div class="inrow"><input type="text" id="dispName" maxlength="18" autocomplete="off"><button class="btn" id="saveName">Kaydet</button></div>
+      </div>
     </div>
   </div>
 
@@ -404,6 +407,16 @@ input[type=text]:focus{border-color:var(--accent)}
   });
 
   if(nick){showGame();}else{document.getElementById('nickInput').focus();}
+
+  // Google ile giriş yapana takma ad ekranı gösterilmez — Google adı otomatik kullanılır
+  window.addEventListener('kb-auth', function(e){
+    var u=e.detail;
+    if(u && !get(LS.nick)){
+      var n=(u.name||'').trim().slice(0,18)||'Oyuncu';
+      nick=n; set(LS.nick,n);
+      if(game.classList.contains('hidden')) showGame();
+    }
+  });
 })();
 </script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}</script>
@@ -428,9 +441,9 @@ input[type=text]:focus{border-color:var(--accent)}
     if(u){
       // Google adı otomatik kullanılır; ad sorulmaz. Sunucuda kayıtlı ad varsa o korunur.
       myName=cleanName(u.name)||'Oyuncu';
-      $('meName').textContent=u.name||'Oyuncu';
-      $('meAv').textContent=(u.name||'O').charAt(0).toUpperCase();
-      if(window.KB&&KB.getMine){ KB.getMine().then(function(d){ if(d&&d.name)myName=d.name; syncIfDone(); }).catch(function(){ syncIfDone(); }); }
+      $('meName').textContent=myName;
+      $('meAv').textContent=myName.charAt(0).toUpperCase();
+      if(window.KB&&KB.getMine){ KB.getMine().then(function(d){ if(d&&d.name){myName=d.name;$('meName').textContent=myName;$('meAv').textContent=myName.charAt(0).toUpperCase();} syncIfDone(); }).catch(function(){ syncIfDone(); }); }
       else { syncIfDone(); }
     }
     loadBoards();
@@ -440,6 +453,23 @@ input[type=text]:focus{border-color:var(--accent)}
 
   $('loginBtn').addEventListener('click', function(){ if(window.KB&&KB.signIn) KB.signIn(); else alert('Giriş yalnızca canlı sitede çalışır.'); });
   $('logoutBtn').addEventListener('click', function(){ if(window.KB&&KB.signOut) KB.signOut(); });
+
+  // İsteğe bağlı: Google adını beğenmeyen liderlik tablosu ismini düzenleyebilir
+  $('editNameBtn').addEventListener('click', function(){
+    var el=$('nameEdit'); el.classList.toggle('hidden');
+    if(!el.classList.contains('hidden')){ $('dispName').value=myName; $('dispName').focus(); }
+  });
+  $('saveName').addEventListener('click', function(){
+    var n=cleanName($('dispName').value);
+    if(!n){alert('Bu isim kullanılamaz, başka bir isim dene.');return;}
+    myName=n; $('meName').textContent=n; $('meAv').textContent=n.charAt(0).toUpperCase();
+    try{localStorage.setItem(LSn,n)}catch(e){}
+    var hn=document.getElementById('hiNick'); if(hn)hn.textContent=n;
+    $('nameEdit').classList.add('hidden');
+    if(window.KB&&KB.setName) KB.setName(n).then(loadBoards).catch(function(){});
+    syncIfDone();
+  });
+  $('dispName').addEventListener('keydown',function(e){if(e.key==='Enter')$('saveName').click()});
 
   function syncIfDone(){
     try{ var s=JSON.parse(get(LSg)||'{}'); if(s.date===todayKey && s.done && user && window.KB&&KB.complete){
