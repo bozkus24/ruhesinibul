@@ -29,7 +29,8 @@ export default async (request, context) => {
   } catch (e) {}
   if (!name) return res;
 
-  const title = esc(name + " - Kriterin");
+  // Başlık her paylaşımda aynı kancayı gösterir; açıklama ankete göre kişiselleşir.
+  const title = "Flörtünü Test Et";
   const desc = esc(name + " kriterlerini belirledi. Ankete katıl; uyum yüzdeni ve liderlik tablosunu gör!");
   let html = await res.text();
   html = html
