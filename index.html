@@ -24,6 +24,7 @@ gtag("consent","default",{ad_storage:c,ad_user_data:c,ad_personalization:c,analy
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#e0405f">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Kriterin","alternateName":"Kriterin, kriter hesaplayıcı","url":"https://kriterin.com/","inLanguage":"tr-TR","description":"Aradığın kriterlere Türkiye'de kaç kişi uyuyor? Hesapla, Günün Sorusu'nda tahmin et, kendi kriterlerinden anketini oluştur.","image":"https://kriterin.com/og-v2.png","publisher":{"@type":"Organization","name":"Kriterin","url":"https://kriterin.com/","email":"kriterincom@gmail.com","logo":{"@type":"ImageObject","url":"https://kriterin.com/favicon-192.png"}},"hasPart":[{"@type":"WebPage","name":"Hesaplayıcı","url":"https://kriterin.com/hesaplayici.html"},{"@type":"WebPage","name":"Günün Sorusu","url":"https://kriterin.com/gunun-sorusu.html"},{"@type":"WebPage","name":"Flörtünü Test Et","url":"https://kriterin.com/anket.html"},{"@type":"CollectionPage","name":"Yazılar","url":"https://kriterin.com/yazilar.html"}]}</script>
 <script>(function(){try{var t=localStorage.getItem("kriterin_tema");if(!t)t=matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
 <style>
 :root{--bg:#f6f3f1;--surface:#fff;--surface-2:#faf7f6;--ink:#231a20;--muted:#8a7f87;--line:#e8e0e1;--accent:#e0405f;--accent-soft:#fbe6ea;--data:#1f9c92;--data-soft:#e2f2f0;--shadow:0 1px 2px rgba(35,26,32,.05),0 12px 30px -18px rgba(35,26,32,.28);--font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
@@ -41,7 +42,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1
 .hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 18px 28px;max-width:600px;margin:0 auto;width:100%}
 .brandline{display:flex;align-items:center;gap:12px;margin-bottom:8px}
 .brandline img{width:46px;height:46px;border-radius:13px}
-.brandline .bn{font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--accent)}
+.brandline .bn{font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--accent);margin:0;line-height:1.2}
 .tagline{color:var(--muted);font-size:15.5px;margin:0 0 30px;text-align:center;text-wrap:balance}
 .doors{display:flex;flex-direction:column;gap:14px;width:100%}
 .door{display:flex;align-items:center;gap:14px;padding:20px 18px;background:var(--surface);border:1px solid var(--line);border-radius:18px;text-decoration:none;color:inherit;box-shadow:var(--shadow)}
@@ -73,7 +74,7 @@ footer a:hover{color:var(--accent)}
 <div class="theme-row"><div class="theme-row-in"><button class="theme-btn" id="themeBtn" title="Temayı değiştir" aria-label="Temayı değiştir">◐</button></div></div>
 
 <main class="hero">
-  <div class="brandline"><span class="bn">Kriterin</span></div>
+  <div class="brandline"><h1 class="bn">Kriterin</h1></div>
   <p class="tagline">Kriterlerini sayılarla test et<br>Hesapla, Tahmin et, Çevrendekileri sına.</p>
 
   <nav class="doors" aria-label="Kriterin bölümleri">
