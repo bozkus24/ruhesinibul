@@ -22,6 +22,15 @@
   to = "/.netlify/functions/leaderboard"
   status = 200
 
+# site/ klasörü yalnızca arşiv kaynak (makale üreteçleri) — yayında servis edilmesin.
+# force = true şart: dosyalar publish dizininde gerçekten var, onsuz statik
+# dosya kuralı geçer ve kaynak yine sunulur.
+[[redirects]]
+  from = "/site/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
 # Güvenlik başlıkları (tüm sayfalar)
 [[headers]]
   for = "/*"
