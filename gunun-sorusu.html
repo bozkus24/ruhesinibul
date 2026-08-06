@@ -227,12 +227,13 @@ input[type=text]:focus{border-color:var(--accent)}
     {q:"Bir futbol sahası kaç metre uzunluğundadır? (ortalama)", a:105, u:"m", s:"FIFA standardı"},
     {q:"Türkiye'de kaç il var?", a:81, u:"il", s:"resmî"},
     {q:"Türkiye'de sevgilisinin/eşinin telefon şifresini bilmeyi \"ilişkide şeffaflık kriteri\" olarak görenlerin oranı yüzde kaçtır?", a:67, u:"%", s:"Ipsos, İlişkilerde Dijital Mahremiyet Araştırması"},
-    {q:"Flört uygulamalarında erkeklerin kadın profilini sağa kaydırma oranı ile kadınların erkek profilini sağa kaydırma oranı arasındaki fark yüzde kaçtır?", a:32, u:"%", s:"Worst-Case / Online Dating Behavioral Data Analysis", note:"Erkekler %46, Kadınlar ise sadece %14 oranında sağa kaydırıyor."}
+    {q:"Flört uygulamalarında erkeklerin kadın profilini sağa kaydırma oranı ile kadınların erkek profilini sağa kaydırma oranı arasındaki fark yüzde kaçtır?", a:32, u:"%", s:"Worst-Case / Online Dating Behavioral Data Analysis", note:"Erkekler %46, Kadınlar ise sadece %14 oranında sağa kaydırıyor."},
+    {q:"Kadınların flört uygulamalarında bir erkeğin profilinde \"boy kriterini\" öncelikli filtre olarak kullanma oranı yüzde kaçtır?", a:52, u:"%", s:"Dating App Usage & Psychology Metrics (Global/TR Data)"}
   ];
   // Belirli günlere özel soru: tarih (y-a-g) → Q indeksi.
   // MUTLAK indeks yazın. Q.length-1 gibi göreli değerler, diziye yeni soru
   // eklendiği anda geçmiş günleri başka soruya kaydırır.
-  var OVERRIDE = { "2026-8-5": 8, "2026-8-6": 9 };
+  var OVERRIDE = { "2026-8-5": 8, "2026-8-6": 9, "2026-8-7": 10 };
 
   var LS = { nick:'kriterin_nick', nickCustom:'kriterin_nick_custom', game:'kriterin_gunun_soru',
              theme:'kriterin_tema', history:'kriterin_gs_history' };
