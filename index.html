@@ -56,6 +56,7 @@ footer a:hover{color:var(--accent)}
 </head>
 <body>
 <button class="theme-btn" id="themeBtn" title="Temayı değiştir" aria-label="Temayı değiştir">◐</button>
+<div id="authNav" style="position:fixed;top:20px;left:16px;z-index:5"></div>
 
 <main class="hero">
   <div class="brandline"><img src="/favicon-192.png" alt="" width="46" height="46"><span class="bn">Kriterin</span></div>
@@ -68,13 +69,13 @@ footer a:hover{color:var(--accent)}
       <span class="d-ar">&rarr;</span>
     </a>
     <a class="door d2" href="/gunun-sorusu.html">
-      <span class="d-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 8.4a3.4 3.4 0 1 1 4.8 3.2c-1 .5-1.4 1.2-1.4 2.2v.5"/><path d="M12 18.3h.01"/></svg></span>
+      <span class="d-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="13.5" r="7.5"/><circle cx="10.5" cy="13.5" r="4"/><circle cx="10.5" cy="13.5" r="1"/><path d="M10.5 13.5L21 3"/><path d="M21 3l-3.4.5M21 3l-.5 3.4"/></svg></span>
       <span class="d-tx"><span class="d-t" id="dtLabel">Günün Sorusu <span class="badge">Yeni</span></span><span class="d-d" id="dtRight">Her gün yeni bir tahmin yarışı</span></span>
       <span class="d-ar">&rarr;</span>
     </a>
     <a class="door d3" href="/anket.html">
       <span class="d-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5C7 16.6 3.5 13.3 3.5 9.6 3.5 6.9 5.6 5 8.1 5c1.6 0 3 .8 3.9 2.1C12.9 5.8 14.3 5 15.9 5c2.5 0 4.6 1.9 4.6 4.6 0 3.7-3.5 7-8.5 10.9Z"/></svg></span>
-      <span class="d-tx"><span class="d-t">Flörtünü Test Et <span class="badge">Yeni</span></span><span class="d-d">İstediğin kişilere yolla, Kriterlerine ne kadar uyuyorlar öğren!</span></span>
+      <span class="d-tx"><span class="d-t">Flörtünü Test Et <span class="badge">Yeni</span></span><span class="d-d">Google ile giriş zorunludur</span></span>
       <span class="d-ar">&rarr;</span>
     </a>
     <a class="door d4" href="/yazilar.html">
@@ -101,5 +102,6 @@ document.getElementById("themeBtn").addEventListener("click",function(){
 (function(){try{var s=JSON.parse(localStorage.getItem('kriterin_gunun_soru')||'{}');var k=(function(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();})(new Date());if(s.date===k&&s.done){var rt=document.getElementById('dtRight');if(rt){var up=function(){var n=new Date(),mid=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1,0,0,0,0),x=Math.floor((mid-n)/1000);if(x<=0){location.reload();return;}var h=Math.floor(x/3600),m=Math.floor(x%3600/60),ss=x%60,z=function(v){return(v<10?'0':'')+v;};rt.textContent='Sonraki soru: '+z(h)+':'+z(m)+':'+z(ss);};up();setInterval(up,1000);}}}catch(e){}})();
 if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});}
 </script>
+<script src="/authnav.js" defer></script>
 </body>
 </html>
