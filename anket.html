@@ -256,11 +256,11 @@ const Store=(function(){
       d.responses=d.responses||[]; d.responses.push({...resp,createdAt:Date.now()});
       lsSet("kriterin_anket_"+id,d);
     },
-    async getLeaderboard(id){
+    async getLeaderboard(id,max){
       await initP;
       if(ready&&!id.startsWith("loc_")){
         const {collection,getDocs,query,orderBy,limit}=fs;
-        const q=query(collection(db,"surveys",id,"responses"),orderBy("score","desc"),limit(500));
+        const q=query(collection(db,"surveys",id,"responses"),orderBy("score","desc"),limit(max||100));
         const snap=await getDocs(q);
         return snap.docs.map(d=>d.data());
       }
@@ -977,7 +977,7 @@ async function renderResults(id,k){
   }
   async function load(){
     rowsEl.innerHTML='<div class="center" style="padding:22px 0"><span class="spin"></span></div>';
-    let rows=null; try{ rows=await Store.getLeaderboard(id); }catch(e){ rows=null; }
+    let rows=null; try{ rows=await Store.getLeaderboard(id,500); }catch(e){ rows=null; }
     if(rows===null){
       rowsEl.innerHTML="";
       const retry=h(`<div><p class="mini center" style="padding:10px 0 6px">Katılımcılar yüklenemedi.</p><button class="btn sec" style="margin-bottom:4px">Tekrar dene</button></div>`);

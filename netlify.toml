@@ -11,6 +11,17 @@
   path = "/anket.html"
   function = "anket-og"
 
+# Sunucu tarafı fonksiyonlar (günün sorusu liderlik özeti)
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Temiz yol: /api/leaderboard -> liderlik fonksiyonu (CDN önbellekli)
+[[redirects]]
+  from = "/api/leaderboard"
+  to = "/.netlify/functions/leaderboard"
+  status = 200
+
 # Güvenlik başlıkları (tüm sayfalar)
 [[headers]]
   for = "/*"
