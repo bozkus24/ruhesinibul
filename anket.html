@@ -562,11 +562,15 @@ function renderCreate(){
     }
     // custom kriterler
     for(const cc of customCards){
-      const q=cc.st.q.trim(); const opts=cc.st.opts.map(o=>o.trim()).filter(Boolean);
-      if(!q&&!opts.length&&!cc.st.accepted.length)continue; // boş bırakılmış
+      const q=cc.st.q.trim();
+      // Seçenek değeri düzenleyicideki satır indeksine bağlıdır ("o"+i). Boş
+      // satırları atıp yeniden indekslersek kabul edilen cevap başka seçeneğe
+      // kayar: ["","Evet","Hayır"] içinde "Evet" (o1) işaretlenmişse, filtreden
+      // sonra o1 "Hayır" olur ve tam puan yanlış cevaba giderdi. İndeks korunuyor.
+      const options=cc.st.opts.map((o,i)=>({v:"o"+i,l:(o||"").trim()})).filter(o=>o.l);
+      if(!q&&!options.length&&!cc.st.accepted.length)continue; // boş bırakılmış
       if(!q) return fail("Eklediğin kriterin sorusunu yaz ya da onu sil.");
-      if(opts.length<2) return fail(`"${q}" için en az 2 seçenek yaz.`);
-      const options=opts.map((l,i)=>({v:"o"+i,l}));
+      if(options.length<2) return fail(`"${q}" için en az 2 seçenek yaz.`);
       const accepted=cc.st.accepted.filter(v=>options.some(o=>o.v===v));
       if(!accepted.length) return fail(`"${q}" için istediğin cevabı işaretle.`);
       criteria.push({id:cc.c.id,title:q,type:"multi",options,accepted,weight:cc.st.weight,custom:true});
