@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Anket Oluştur, Kriterin</title>
 <meta name="description" content="Kendi kriterlerinden anketini oluştur, arkadaşlarına link at; ne kadar uyduklarını ve liderlik tablosunu gör.">
+<link rel="canonical" href="https://kriterin.com/anket.html" />
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Kriterin">
 <meta property="og:title" content="Anket Oluştur, Kriterin">
@@ -16,7 +17,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="robots" content="index,follow">
 <style>
-:root{--bg:#f6f3f1;--surface:#fff;--surface-2:#faf7f6;--ink:#231a20;--muted:#8a7f87;--line:#e8e0e1;--accent:#e0405f;--accent-soft:#fbe6ea;--data:#1f9c92;--data-soft:#e2f2f0;--shadow:0 1px 2px rgba(35,26,32,.05),0 12px 30px -18px rgba(35,26,32,.28);--radius:14px;--font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--maxw:820px}
+:root{--bg:#f6f3f1;--surface:#fff;--surface-2:#faf7f6;--ink:#231a20;--muted:#6e666c;--line:#e8e0e1;--accent:#e0405f;--accent-soft:#fbe6ea;--data:#1f9c92;--data-soft:#e2f2f0;--shadow:0 1px 2px rgba(35,26,32,.05),0 12px 30px -18px rgba(35,26,32,.28);--radius:14px;--font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--maxw:820px}
 [data-theme=dark]{--bg:#151016;--surface:#1e1720;--surface-2:#241c26;--ink:#f2eaef;--muted:#9a8f98;--line:#332a33;--accent:#ff6a82;--accent-soft:#3a2028;--data:#3fc3b5;--data-soft:#173029;--shadow:0 1px 2px rgba(0,0,0,.3),0 14px 34px -18px rgba(0,0,0,.7)}
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -82,7 +83,7 @@ h1{margin:6px 0 6px;font-size:clamp(23px,5vw,32px);letter-spacing:-.02em;line-he
 .lb-row{display:flex;align-items:center;gap:11px;padding:10px 4px;border-top:1px solid var(--line)}
 .lb-row:first-child{border-top:none}
 .lb-rank{width:26px;text-align:center;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
-.lb-name{flex:1;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-name{flex:1;font-weight:600;font-size:14px;overflow-wrap:anywhere}
 .lb-score{font-weight:800;color:var(--data);font-variant-numeric:tabular-nums}
 .lb-row.me{background:var(--accent-soft);border-radius:10px;padding-left:8px;padding-right:8px}
 .lb-row.top1 .lb-rank{color:#e0a020}
@@ -114,6 +115,10 @@ footer a{color:var(--muted);margin:0 7px;text-decoration:none}
 .spin{display:inline-block;width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 </style>
+<script>/* Consent Mode v2: onay gelene kadar reklam ve olcum depolamasi kapali. gtag yuklenmeden once calismali. */
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}
+(function(){var c="denied";try{if(localStorage.getItem("kriterin_cerez")==="kabul")c="granted"}catch(e){}
+gtag("consent","default",{ad_storage:c,ad_user_data:c,ad_personalization:c,analytics_storage:c,wait_for_update:500});})();</script>
 </head>
 <body>
 <nav class="sitenav"><div class="sitenav-in">
@@ -319,6 +324,14 @@ function rangePoints(c,n){
   const drop=Math.ceil(dist/step);
   return Math.max(0,MAXPTS-drop);
 }
+function kisaAdA(s){
+  const p=(s||'').trim().split(/\s+/).filter(Boolean);
+  if(!p.length) return '';
+  const ad=p[0];
+  if(p.length===1) return ad;
+  const ikili=ad+' '+p[p.length-1];
+  return ikili.length<=19 ? ikili : ad;
+}
 function computeScore(survey,answers){
   let got=0,maxTotal=0; const brk=[];
   for(const c of survey.criteria){
@@ -412,7 +425,7 @@ function renderCreate(){
   app.appendChild(h(`<div class="top">
     <div class="eyebrow">Anket oluşturucu</div>
     <h1>Kendi kriterlerinden anketini oluştur</h1>
-    <p class="lede">İstediğin kriterleri seç, her birine 1 ile 5 arasında bir önem katsayısı ver. Flörtüne çözdür ve hemen skorunu öğren! Merak etme liderlik tablosunu sadece sen görebilirsin :)</p>
+    <p class="lede">İstediğin kriterleri seç, her birine 1 ile 5 arasında bir önem katsayısı ver. Flörtüne çözdür ve hemen skorunu öğren! Merak etme, liderlik tablosunu sadece sen görebilirsin :)</p>
   </div>`));
 
   // Daha önce oluşturduğu anketler (bu cihazda / hesabında)
@@ -491,7 +504,7 @@ function renderCreate(){
     if(u){
       authCard.querySelector("[data-gname]").textContent=u.name||"Google hesabı";
       const so=nameCard&&nameCard.querySelector("#sowner");
-      if(so&&!so.value&&u.name)so.value=String(u.name).trim().slice(0,24);
+      if(so&&!so.value&&u.name)so.value=kisaAdA(u.name);
       anketSync();  // eski anketleri hesaba bağla + diğer cihazlardakileri getir
     }
   });
@@ -771,7 +784,7 @@ async function renderRespond(id){
 
   // Google ile giriş yapmışsa (Günün Sorusu'ndan) takma ad sorulmaz, Google adı kullanılır
   let gUser=null; try{ gUser=await Store.getUser(); }catch(e){}
-  const gName=gUser&&gUser.name?String(gUser.name).trim().slice(0,24):"";
+  const gName=gUser&&gUser.name?kisaAdA(gUser.name):"";
   let nameCard=null;
   if(gName){
     app.appendChild(h(`<div class="msg ok" style="margin:0 0 4px">Merhaba <b>${esc(gName)}</b>, liderlik tablosunda bu isimle görüneceksin.</div>`));
@@ -990,5 +1003,6 @@ async function renderResults(id){
 }
 </script>
 <script src="/authnav.js" defer></script>
+<script src="/cerez.js" defer></script>
 </body>
 </html>

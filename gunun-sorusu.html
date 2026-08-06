@@ -1,7 +1,10 @@
 <!doctype html>
 <html lang="tr" data-theme="light">
 <head>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7993571496408496" crossorigin="anonymous"></script>
+<script>/* Consent Mode v2: onay gelene kadar reklam ve olcum depolamasi kapali. gtag yuklenmeden once calismali. */
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}
+(function(){var c="denied";try{if(localStorage.getItem("kriterin_cerez")==="kabul")c="granted"}catch(e){}
+gtag("consent","default",{ad_storage:c,ad_user_data:c,ad_personalization:c,analytics_storage:c,wait_for_update:500});})();</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-SCD3T9YLYV"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-SCD3T9YLYV');</script>
 <meta charset="utf-8" />
@@ -17,7 +20,7 @@
 <meta property="og:url" content="https://kriterin.com/gunun-sorusu.html" />
 <meta property="og:title" content="Günün Sorusu · Kriterin" />
 <meta property="og:description" content="Her gün istatistiki bir tahmin sorusu, 5 hakla doğru sayıyı bul." />
-<meta property="og:image" content="https://kriterin.com/og.png" />
+<meta property="og:image" content="https://kriterin.com/og-v2.png" />
 <meta name="twitter:card" content="summary_large_image" />
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
@@ -28,7 +31,7 @@
 <meta name="apple-mobile-web-app-title" content="Kriterin" />
 <style>
 :root{
-  --bg:#f6f3f1; --surface:#fff; --surface-2:#faf7f6; --ink:#231a20; --muted:#8a7f87;
+  --bg:#f6f3f1; --surface:#fff; --surface-2:#faf7f6; --ink:#231a20; --muted:#6e666c;
   --line:#e8e0e1; --accent:#e0405f; --accent-soft:#fbe6ea; --data:#1f9c92; --data-soft:#e2f2f0;
   --shadow:0 1px 2px rgba(35,26,32,.05),0 12px 30px -18px rgba(35,26,32,.28); --radius:14px;
   --font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -236,12 +239,21 @@ input[type=text]:focus{border-color:var(--accent)}
   var OVERRIDE = { "2026-8-5": 8, "2026-8-6": 9, "2026-8-7": 10 };
 
   var LS = { nick:'kriterin_nick', nickCustom:'kriterin_nick_custom', game:'kriterin_gunun_soru',
-             theme:'kriterin_tema', history:'kriterin_gs_history' };
+             theme:'kriterin_tema', history:'kriterin_gs_history', gun:'kriterin_gs_gun' };
   var MAX = 5;
   function get(k){try{return localStorage.getItem(k)}catch(e){return null}}
   function set(k,v){try{localStorage.setItem(k,v)}catch(e){}}
   function fmt(n){return Number(n).toLocaleString('tr-TR')}
   function ymd(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()}
+  // Ad + soyad; ikisi birlikte 19 karakteri aşarsa yalnızca ad. Üçnokta yok.
+  function kisaAd(s){
+    var p=(s||'').trim().split(/\s+/).filter(Boolean);
+    if(!p.length) return '';
+    var ad=p[0];
+    if(p.length===1) return ad;
+    var ikili=ad+' '+p[p.length-1];
+    return ikili.length<=19 ? ikili : ad;
+  }
   // Takvim gununden gun numarasi. Date.UTC ile hesaplanir: girdi zaten yerel
   // takvim tarihi oldugu icin sonuc saat diliminden bagimsizdir. Gun numarasini
   // "simdi"nin UTC zaman damgasindan turetmek, UTC+3'te gece yarisi ile 03:00
@@ -291,6 +303,40 @@ input[type=text]:focus{border-color:var(--accent)}
   function histKey(){ return curUid ? LS.history+':'+curUid : LS.history; }
   function loadHistory(){try{return JSON.parse(get(histKey()))||{}}catch(e){return {}}}
   function saveHistory(h){set(histKey(),JSON.stringify(h))}
+
+  // Gün başına tek hak: asıl kayıt geçmiştir, state değil. Geçmişte bugüne ait
+  // bir kayıt varsa (bu cihazda oynanmış ya da sunucudan senkronla gelmiş
+  // olabilir) gün kilitlenir. Yoksa cihaz A'da çözüp B'de giren biri soruyu
+  // ikinci kez çözebiliyordu; çıkış/giriş yapmak da state'i sıfırlıyordu.
+  // Cihaz duzeyinde gun kaydi: kimlikten bagimsiz. Cikis yapip misafir olarak
+  // gunu tekrar oynamayi engeller (Wordle'in yaptigi gibi, localStorage tabanli).
+  function cihazGunu(){
+    try{ var g=JSON.parse(get(LS.gun)||'null'); return (g&&g.date===todayKey)?g:null; }catch(e){ return null; }
+  }
+  function cihazGunuYaz(rec){
+    try{ set(LS.gun, JSON.stringify({date:todayKey,by:curUid||null,
+      solved:!!rec.solved,tries:rec.tries||MAX,ms:rec.ms||0})); }catch(e){}
+  }
+  // Cihaz kaydi girissiz (misafir) oynayani kilitler. Giris yapmis bir kimlik
+  // kendi gecmisiyle kilitlenir; boylece ayni tarayicida BASKA bir hesap gunu
+  // oynayabilir (paylasilan cihaz), ama ayni kisi cikis yapip tekrar oynayamaz.
+  function gunKaydi(){
+    var h=loadHistory();
+    if(h && h[todayKey]) return h[todayKey];
+    var c=cihazGunu();
+    if(c && curUid===null) return c;
+    return null;
+  }
+  function gecmistenKilitle(){
+    if(state.done) return false;
+    var k=gunKaydi();
+    if(!k) return false;
+    state.date=todayKey; state.done=true; state.solved=!!k.solved;
+    state.guesses=new Array(Math.max(1,Math.min(MAX,k.tries||MAX))).fill(null);
+    state.solveMs=k.ms||0;
+    set(LS.game, JSON.stringify(state));
+    return true;
+  }
   var keyNum = dayNumOf;
 
   function svgIcon(inner,color){return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+inner+'</svg>';}
@@ -428,7 +474,8 @@ input[type=text]:focus{border-color:var(--accent)}
     if(guess===today.a){ state.solved=true; state.done=true; state.solveMs=Math.max(0,Date.now()-(state.startedAt||Date.now())); }
     else if(state.guesses.length>=MAX){ state.done=true; }
     set(LS.game, JSON.stringify(state));
-    if(state.done){ var hh=loadHistory(); hh[todayKey]={solved:state.solved,tries:state.guesses.length,ms:state.solveMs||0}; saveHistory(hh); try{window.dispatchEvent(new CustomEvent('kb-done'))}catch(e){} syncServer(); }
+    if(state.done){ var kayit={solved:state.solved,tries:state.guesses.length,ms:state.solveMs||0};
+      var hh=loadHistory(); hh[todayKey]=kayit; saveHistory(hh); cihazGunuYaz(kayit); try{window.dispatchEvent(new CustomEvent('kb-done'))}catch(e){} syncServer(); }
     document.getElementById('guessInput').value='';
     renderGame(); renderStats();
   });
@@ -444,20 +491,19 @@ input[type=text]:focus{border-color:var(--accent)}
     else if(navigator.clipboard){navigator.clipboard.writeText(shareText());alert('Sonuç kopyalandı!');}
   });
 
+  gecmistenKilitle();   // bu cihazda bugun zaten oynanmissa acilista kilitli gelsin
   if(nick){showGame();}else{document.getElementById('nickInput').focus();}
 
   // ===== İki yönlü Google senkronu: sunucudaki gün-gün geçmişle birleştir =====
   var gUser=null, syncing=false, lastSyncSig=null;
-  function pickEntry(a,b){ // aynı gün iki kayıt: çözüleni ve az tahminliyi tut
-    if(b.solved && !a.solved) return b;
-    if(a.solved && !b.solved) return a;
-    if(a.solved && b.solved) return ((b.tries||5)<(a.tries||5))?b:a;
-    return a;
-  }
+  // Aynı gün iki kayıt varsa ÖNCE kaydedilen (sunucudaki) kazanır.
+  // Eskiden az tahminli olan seçiliyordu; bu, çıkış yapıp misafir olarak günü
+  // tekrar oynayan birinin daha iyi sonucu sunucuya geçirmesine izin veriyordu.
+  // Gün başına tek hak kuralının karşılığı budur.
   function mergeHistory(server, local){
     var m={},k;
     for(k in server) if(Object.prototype.hasOwnProperty.call(server,k)) m[k]=server[k];
-    for(k in local) if(Object.prototype.hasOwnProperty.call(local,k)) m[k]=m[k]?pickEntry(m[k],local[k]):local[k];
+    for(k in local) if(Object.prototype.hasOwnProperty.call(local,k) && !m[k]) m[k]=local[k];
     return m;
   }
   function syncServer(){
@@ -469,14 +515,17 @@ input[type=text]:focus{border-color:var(--accent)}
     KB.getMine().then(function(d){
       var server=(d&&d.history)||{};
       var merged=mergeHistory(server, loadHistory());
-      saveHistory(merged); renderStats();
+      saveHistory(merged);
+      // Sunucudan bugune ait kayit geldiyse (baska cihazda cozulmus) gunu kilitle
+      if(gecmistenKilitle()){ try{ renderGame(); }catch(_e){} }
+      renderStats();
       var st=computeStats(merged);
       // İsim önceliği: kullanıcının bu cihazda bilerek yazdığı ad > sunucudaki
       // kayıtlı ad > Google adı. Sunucudaki ad atlanırsa, 1. cihazda düzenlenen
       // liderlik ismi 2. cihaz açılınca Google adıyla geri ezilir.
       var kendi=get(LS.nickCustom) ? (get(LS.nick)||'').trim() : '';
       var sunucu=((d&&d.name)||'').trim();
-      var name=kendi||sunucu||((gUser.name||'').trim().slice(0,18))||'Oyuncu';
+      var name=kendi||sunucu||kisaAd(gUser.name)||'Oyuncu';
       if(!kendi && sunucu){        // sunucudaki adı bu cihazda da göster
         nick=sunucu; set(LS.nick,sunucu);
         var hn=document.getElementById('hiNick'); if(hn)hn.textContent=sunucu;
@@ -488,7 +537,13 @@ input[type=text]:focus{border-color:var(--accent)}
       lastSyncSig=JSON.stringify(merged); // bu geçmişi yazdık; aynı kaldığı sürece tekrar yazma
       return KB.save(payload);
     }).then(function(){ try{window.dispatchEvent(new CustomEvent('kb-synced'))}catch(e){} })
-      .catch(function(){ lastSyncSig=null; }).then(function(){ syncing=false; });
+      .catch(function(err){
+        lastSyncSig=null;
+        // Eskiden tamamen sessizdi: App Check, Firestore kurallari ya da ag
+        // kaynakli surekli bir yazma hatasi hic gorunmuyor, kullanici da
+        // liderlik tablosunda neden cikmadigini anlayamiyordu.
+        try{ console.error('[Kriterin] Liderlik senkronu basarisiz:', (err&&err.code)||'', (err&&err.message)||err); }catch(_e){}
+      }).then(function(){ syncing=false; });
   }
 
   // Google ile giriş yapana takma ad ekranı gösterilmez, Google adı otomatik kullanılır
@@ -504,7 +559,6 @@ input[type=text]:focus{border-color:var(--accent)}
       if(state.uid!==undefined && state.uid!==curUid){
         state={date:todayKey,guesses:[],done:false,solved:false,startedAt:Date.now(),uid:curUid};
         set(LS.game, JSON.stringify(state));
-        try{ renderGame(); }catch(_e){}
       } else {
         state.uid=curUid; set(LS.game, JSON.stringify(state));
       }
@@ -527,7 +581,7 @@ input[type=text]:focus{border-color:var(--accent)}
         try{ localStorage.removeItem(LS.history); }catch(_e){}
       }
       if(!get(LS.nick)){
-        var n=(u.name||'').trim().slice(0,18)||'Oyuncu';
+        var n=kisaAd(u.name)||'Oyuncu';
         nick=n; set(LS.nick,n);
         var hn0=document.getElementById('hiNick'); if(hn0)hn0.textContent=n;
         if(game.classList.contains('hidden')) showGame();
@@ -535,6 +589,10 @@ input[type=text]:focus{border-color:var(--accent)}
       renderStats();
       syncServer();
     }
+    // Kimlik degistikten (ve misafir gecmisi tasindiktan) sonra bu kimligin
+    // gecmisinde bugun varsa gunu kilitle; state sifirlanmis olsa bile.
+    gecmistenKilitle();
+    try{ renderGame(); }catch(_e){}
   });
 })();
 </script>
@@ -547,9 +605,18 @@ input[type=text]:focus{border-color:var(--accent)}
   var LSg='kriterin_gunun_soru', LSn='kriterin_nick';
   function get(k){try{return localStorage.getItem(k)}catch(e){return null}}
   var BAD=['orospu','piç','pic','yarrak','yarak','amk','pezevenk','kahpe','anani','anan','yavsak','oç','sik','got','siktir','amcik'];
-  function cleanName(s){ s=(s||'').trim().replace(/\s+/g,' ').slice(0,18); if(!s)return ''; var l=s.toLowerCase().replace(/[0-9@_.*ıİ]/g,''); for(var i=0;i<BAD.length;i++){ if(l.indexOf(BAD[i])>=0) return ''; } return s; }
+  function cleanName(s){ s=(s||'').trim().replace(/\s+/g,' ').slice(0,19); if(!s)return ''; var l=s.toLowerCase().replace(/[0-9@_.*ıİ]/g,''); for(var i=0;i<BAD.length;i++){ if(l.indexOf(BAD[i])>=0) return ''; } return s; }
   function esc(s){return (s+'').replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});}
   function ymd(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+  // Ad + soyad; ikisi birlikte 19 karakteri aşarsa yalnızca ad. Üçnokta yok.
+  function kisaAd(s){
+    var p=(s||'').trim().split(/\s+/).filter(Boolean);
+    if(!p.length) return '';
+    var ad=p[0];
+    if(p.length===1) return ad;
+    var ikili=ad+' '+p[p.length-1];
+    return ikili.length<=19 ? ikili : ad;
+  }
   var todayKey=ymd(new Date());
   var user=null, curBoard='streak', myName='';
 
@@ -559,7 +626,7 @@ input[type=text]:focus{border-color:var(--accent)}
     $('authIn').classList.toggle('hidden', !u);
     if(u){
       // Google adı otomatik kullanılır; ad sorulmaz. Sunucuda kayıtlı ad varsa o korunur.
-      myName=cleanName(u.name)||'Oyuncu';
+      myName=cleanName(kisaAd(u.name))||'Oyuncu';
       $('meName').textContent=myName;
       $('meAv').textContent=myName.charAt(0).toUpperCase();
       if(window.KB&&KB.getMine){ KB.getMine().then(function(d){ if(d&&d.name){myName=d.name;$('meName').textContent=myName;$('meAv').textContent=myName.charAt(0).toUpperCase();} }).catch(function(){}); }
@@ -616,7 +683,14 @@ input[type=text]:focus{border-color:var(--accent)}
   function fetchStatic(force){
     return fetch('/api/leaderboard', force?{cache:'reload'}:{})
       .then(function(r){ if(!r.ok) throw 0; return r.json(); })
-      .then(function(j){ if(!j||(!j.streak&&!j.tries)) throw 0; staticData={streak:j.streak||[],tries:j.tries||[]}; staticAt=Date.now(); });
+      // Bos dizi truthy oldugu icin eskiden burada throw atilmiyordu: sunucu bos
+      // ozet donerse tablo kalici olarak statik moda kilitlenip "Henuz kimse yok"
+      // gosteriyor, canli Firestore yoluna hic dusmuyordu. Uzunluga bakiyoruz.
+      .then(function(j){
+        var st=(j&&j.streak)||[], tr=(j&&j.tries)||[];
+        if(!j||(!st.length&&!tr.length)) throw 0;
+        staticData={streak:st,tries:tr}; staticAt=Date.now();
+      });
   }
   function maybeRefreshStatic(force){
     if(!force && Date.now()-staticAt < 120000) return; // 2 dk'dan yeniyse dokunma
@@ -717,5 +791,6 @@ input[type=text]:focus{border-color:var(--accent)}
   </div>
 </footer>
 <script src="/authnav.js" defer></script>
+<script src="/cerez.js" data-ads defer></script>
 </body>
 </html>
