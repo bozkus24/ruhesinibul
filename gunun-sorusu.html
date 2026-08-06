@@ -229,15 +229,23 @@ input[type=text]:focus{border-color:var(--accent)}
     {q:"Türkiye'de sevgilisinin/eşinin telefon şifresini bilmeyi \"ilişkide şeffaflık kriteri\" olarak görenlerin oranı yüzde kaçtır?", a:67, u:"%", s:"Ipsos, İlişkilerde Dijital Mahremiyet Araştırması"},
     {q:"Flört uygulamalarında erkeklerin kadın profilini sağa kaydırma oranı ile kadınların erkek profilini sağa kaydırma oranı arasındaki fark yüzde kaçtır?", a:32, u:"%", s:"Worst-Case / Online Dating Behavioral Data Analysis", note:"Erkekler %46, Kadınlar ise sadece %14 oranında sağa kaydırıyor."}
   ];
-  // Belirli günlere özel soru: tarih (y-a-g) → Q indeksi
-  var OVERRIDE = { "2026-8-5": Q.length-2, "2026-8-6": Q.length-1 };
+  // Belirli günlere özel soru: tarih (y-a-g) → Q indeksi.
+  // MUTLAK indeks yazın. Q.length-1 gibi göreli değerler, diziye yeni soru
+  // eklendiği anda geçmiş günleri başka soruya kaydırır.
+  var OVERRIDE = { "2026-8-5": 8, "2026-8-6": 9 };
 
-  var LS = { nick:'kriterin_nick', game:'kriterin_gunun_soru', theme:'kriterin_tema', history:'kriterin_gs_history' };
+  var LS = { nick:'kriterin_nick', nickCustom:'kriterin_nick_custom', game:'kriterin_gunun_soru',
+             theme:'kriterin_tema', history:'kriterin_gs_history' };
   var MAX = 5;
   function get(k){try{return localStorage.getItem(k)}catch(e){return null}}
   function set(k,v){try{localStorage.setItem(k,v)}catch(e){}}
   function fmt(n){return Number(n).toLocaleString('tr-TR')}
   function ymd(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()}
+  // Takvim gununden gun numarasi. Date.UTC ile hesaplanir: girdi zaten yerel
+  // takvim tarihi oldugu icin sonuc saat diliminden bagimsizdir. Gun numarasini
+  // "simdi"nin UTC zaman damgasindan turetmek, UTC+3'te gece yarisi ile 03:00
+  // arasinda bir onceki gunu verirdi.
+  function dayNumOf(k){var p=k.split('-');return Math.floor(Date.UTC(+p[0],+p[1]-1,+p[2])/86400000)}
   var _cdTimer;
   function startCountdown(){
     var el=document.getElementById('nextIn'); if(!el) return;
@@ -252,7 +260,7 @@ input[type=text]:focus{border-color:var(--accent)}
 
   var now = new Date();
   var todayKey = ymd(now);
-  var dayNo = Math.floor(now.getTime()/86400000);
+  var dayNo = dayNumOf(todayKey);
   var idx = ((dayNo % Q.length)+Q.length)%Q.length;
   if(OVERRIDE[todayKey]!=null) idx=OVERRIDE[todayKey];
   var today = Q[idx];
@@ -274,9 +282,15 @@ input[type=text]:focus{border-color:var(--accent)}
   if(state.date!==todayKey) state={date:todayKey,guesses:[],done:false,solved:false,startedAt:Date.now()};
   else if(!state.startedAt && !state.done) state.startedAt=Date.now();
 
-  function loadHistory(){try{return JSON.parse(get(LS.history))||{}}catch(e){return {}}}
-  function saveHistory(h){set(LS.history,JSON.stringify(h))}
-  function keyNum(k){var p=k.split('-');return Math.floor(new Date(+p[0],+p[1]-1,+p[2]).getTime()/86400000)}
+  // Geçmiş kimliğe göre ayrılır. Tek global anahtarda tutulursa aynı tarayıcıda
+  // ikinci bir Google hesabına geçildiğinde önceki kullanıcının geçmişi yeni
+  // hesaba karışır ve sunucuya onun adına yazılır. Girişsiz oynanan geçmiş
+  // "misafir" anahtarında durur; ilk girişte hesaba taşınır.
+  var curUid = null;
+  function histKey(){ return curUid ? LS.history+':'+curUid : LS.history; }
+  function loadHistory(){try{return JSON.parse(get(histKey()))||{}}catch(e){return {}}}
+  function saveHistory(h){set(histKey(),JSON.stringify(h))}
+  var keyNum = dayNumOf;
 
   function svgIcon(inner,color){return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+inner+'</svg>';}
   var IC={
@@ -354,7 +368,7 @@ input[type=text]:focus{border-color:var(--accent)}
     keys.forEach(function(k){ var kn=keyNum(k); if(kn>lastNum){lastNum=kn;lastKey=k;} if(h[k].solved){solvedCount++;triesSum+=(h[k].tries||5);msSum+=(h[k].ms||0);} });
     var best=nums.length?1:0,run=1,i;
     for(i=1;i<nums.length;i++){ if(nums[i]===nums[i-1]+1){run++;if(run>best)best=run;} else {run=1;} }
-    var todayNum=Math.floor(now.getTime()/86400000), start=setN[todayNum]?todayNum:(setN[todayNum-1]?todayNum-1:null), cur=0;
+    var todayNum=dayNumOf(todayKey), start=setN[todayNum]?todayNum:(setN[todayNum-1]?todayNum-1:null), cur=0;
     if(start!=null){ var kk=start; while(setN[kk]){cur++;kk--;} }
     return { totalDays:total, solvedCount:solvedCount, totalTries:triesSum, solveMsSum:msSum,
       bestStreak:best, streak:cur, lastDate:lastKey, eligible:total>=10,
@@ -370,7 +384,7 @@ input[type=text]:focus{border-color:var(--accent)}
     var nums=keys.map(keyNum).sort(function(a,b){return a-b}), setN={};
     nums.forEach(function(n){setN[n]=1});
     var total=st.totalDays, cur=st.streak, best=st.bestStreak, rate=st.rate, avg=st.avgTries;
-    var todayNum=Math.floor(now.getTime()/86400000);
+    var todayNum=dayNumOf(todayKey);
     document.getElementById('stTotal').textContent=total;
     document.getElementById('stCur').textContent=cur;
     document.getElementById('stBest').textContent=best;
@@ -392,11 +406,13 @@ input[type=text]:focus{border-color:var(--accent)}
   document.getElementById('nickSave').addEventListener('click',function(){
     var v=document.getElementById('nickInput').value.trim();
     if(!v){document.getElementById('nickInput').focus();return;}
-    nick=v; set(LS.nick,v); showGame();
+    nick=v; set(LS.nick,v); set(LS.nickCustom,'1'); showGame();
   });
   document.getElementById('nickInput').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('nickSave').click()});
   document.getElementById('nickChange').addEventListener('click',function(){
-    try{localStorage.removeItem(LS.nick)}catch(e){}
+    // Bayrak da silinmeli: kalırsa sonradan atanan Google adı "kullanıcının
+    // bilerek seçtiği ad" sanılıp sunucudaki kayıtlı adı ezer.
+    try{localStorage.removeItem(LS.nick);localStorage.removeItem(LS.nickCustom)}catch(e){}
     game.classList.add('hidden'); nickGate.classList.remove('hidden');
     document.getElementById('nickInput').value=''; document.getElementById('nickInput').focus();
   });
@@ -454,7 +470,16 @@ input[type=text]:focus{border-color:var(--accent)}
       var merged=mergeHistory(server, loadHistory());
       saveHistory(merged); renderStats();
       var st=computeStats(merged);
-      var name=(get(LS.nick)||'').trim()||((gUser.name||'').trim().slice(0,18))||'Oyuncu';
+      // İsim önceliği: kullanıcının bu cihazda bilerek yazdığı ad > sunucudaki
+      // kayıtlı ad > Google adı. Sunucudaki ad atlanırsa, 1. cihazda düzenlenen
+      // liderlik ismi 2. cihaz açılınca Google adıyla geri ezilir.
+      var kendi=get(LS.nickCustom) ? (get(LS.nick)||'').trim() : '';
+      var sunucu=((d&&d.name)||'').trim();
+      var name=kendi||sunucu||((gUser.name||'').trim().slice(0,18))||'Oyuncu';
+      if(!kendi && sunucu){        // sunucudaki adı bu cihazda da göster
+        nick=sunucu; set(LS.nick,sunucu);
+        var hn=document.getElementById('hiNick'); if(hn)hn.textContent=sunucu;
+      }
       var payload={ name:name, history:merged, streak:st.streak, bestStreak:st.bestStreak,
         totalDays:st.totalDays, solvedCount:st.solvedCount, totalTries:st.totalTries,
         solveMsSum:st.solveMsSum, lastDate:st.lastDate, eligible:st.eligible };
@@ -468,12 +493,45 @@ input[type=text]:focus{border-color:var(--accent)}
   // Google ile giriş yapana takma ad ekranı gösterilmez, Google adı otomatik kullanılır
   window.addEventListener('kb-auth', function(e){
     var u=e.detail; gUser=u;
+    var prevUid=curUid;
+    curUid = u ? u.uid : null;
+
+    if(prevUid!==curUid){
+      lastSyncSig=null;                       // yeni kimlik: eski senkron imzası geçersiz
+      // Bugünün oyun durumu başka bir kimliğe aitse sıfırla; yoksa A'nın çözdüğü
+      // soru B'nin geçmişine "B çözmüş" diye yazılır.
+      if(state.uid!==undefined && state.uid!==curUid){
+        state={date:todayKey,guesses:[],done:false,solved:false,startedAt:Date.now(),uid:curUid};
+        set(LS.game, JSON.stringify(state));
+        try{ renderGame(); }catch(_e){}
+      } else {
+        state.uid=curUid; set(LS.game, JSON.stringify(state));
+      }
+      // Ad da kimliğe aittir. Önceki gerçek bir hesapsa (A → B ya da A → çıkış)
+      // adı onunla birlikte bırak; yoksa A'nın seçtiği ad B'nin adı olarak
+      // sunucuya yazılır. Misafirken seçilen ad ise ilk girişte korunur.
+      if(prevUid){
+        try{localStorage.removeItem(LS.nick);localStorage.removeItem(LS.nickCustom)}catch(_e){}
+        nick=null;
+      } else if(!get(LS.nickCustom)){
+        try{localStorage.removeItem(LS.nick)}catch(_e){} nick=null;
+      }
+    }
+
     if(u){
+      // Girişsiz oynanan geçmişi ilk girişte hesaba taşı (bir kez).
+      var guest=null; try{ guest=JSON.parse(get(LS.history)||'null'); }catch(_e){}
+      if(guest && Object.keys(guest).length){
+        saveHistory(mergeHistory(loadHistory(), guest));
+        try{ localStorage.removeItem(LS.history); }catch(_e){}
+      }
       if(!get(LS.nick)){
         var n=(u.name||'').trim().slice(0,18)||'Oyuncu';
         nick=n; set(LS.nick,n);
+        var hn0=document.getElementById('hiNick'); if(hn0)hn0.textContent=n;
         if(game.classList.contains('hidden')) showGame();
       }
+      renderStats();
       syncServer();
     }
   });
@@ -523,7 +581,8 @@ input[type=text]:focus{border-color:var(--accent)}
     var n=cleanName($('dispName').value);
     if(!n){alert('Bu isim kullanılamaz, başka bir isim dene.');return;}
     myName=n; $('meName').textContent=n; $('meAv').textContent=n.charAt(0).toUpperCase();
-    try{localStorage.setItem(LSn,n)}catch(e){}
+    // Bilerek seçilmiş ad: senkron sırasında Google adıyla ezilmemeli
+    try{localStorage.setItem(LSn,n);localStorage.setItem('kriterin_nick_custom','1')}catch(e){}
     var hn=document.getElementById('hiNick'); if(hn)hn.textContent=n;
     $('nameEdit').classList.add('hidden');
     if(window.KB&&KB.setName) KB.setName(n).then(loadBoards).catch(function(){});
