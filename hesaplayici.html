@@ -39,7 +39,7 @@ try {
   --surface: #ffffff;
   --surface-2: #faf7f6;
   --ink: #231a20;
-  --muted: #8a7f87;
+  --muted: #6e666c;
   --line: #e8e0e1;
   --accent: #e0405f;
   --accent-soft: #fbe6ea;
@@ -70,7 +70,7 @@ try {
   --surface: #ffffff;
   --surface-2: #faf7f6;
   --ink: #231a20;
-  --muted: #8a7f87;
+  --muted: #6e666c;
   --line: #e8e0e1;
   --accent: #e0405f;
   --accent-soft: #fbe6ea;
@@ -2281,11 +2281,17 @@ function childWantProb(e, t) {
   return i > 0 ? a / i : 0
 }
 
+// Kaydiricilar tam sayi; "180" aslinda [179,5 - 180,5) bandidir. Sureklilik
+// duzeltmesi olmadan min ile max esitken olasilik tam 0 cikiyor ("0 kisi"),
+// cunku surekli dagilimda tek bir noktanin olasiligi sifirdir. Ayrica ust
+// sinir da dahil oluyor: 160-190 secen biri 190 cm'lileri de kapsiyor.
+const BAND = .5;
+
 function heightProb(e, t) {
   const n = selectedGenders();
   let a = 0,
     i = 0;
-  for (const r of n) a += GENDER[r] * (heightCdf(t, r) - heightCdf(e, r)), i += GENDER[r];
+  for (const r of n) a += GENDER[r] * (heightCdf(t + BAND, r) - heightCdf(e - BAND, r)), i += GENDER[r];
   return i > 0 ? a / i : 0
 }
 const IQ = {
@@ -2302,8 +2308,9 @@ const IQ = {
   IQ_MAX = 145;
 
 function iqProb(e, t) {
-  const n = e <= 55 ? -1 / 0 : e,
-    a = t >= 145 ? 1 / 0 : t;
+  // Uc degerlerde kuyruk acik kalir; arada sureklilik duzeltmesi uygulanir.
+  const n = e <= 55 ? -1 / 0 : e - BAND,
+    a = t >= 145 ? 1 / 0 : t + BAND;
   if (n === -1 / 0 && a === 1 / 0) return 1;
   const i = (e, t, n) => e === -1 / 0 ? 0 : e === 1 / 0 ? 1 : normCdf(e, t, n),
     r = selectedGenders();
@@ -2766,10 +2773,17 @@ function hairColorProb(e) {
 function sacRenkMultiplier() {
   const e = state.sacRenk;
   if (0 === e.size || e.has("farketmez")) return 1;
-  let t = 0;
-  for (const n of ["siyah", "koyukahve", "kumral", "sari", "kizil"]) e.has(n) && (t +=
-    hairColorProb(n));
-  return Math.min(t, 1)
+  // Bes rengin paylari 1'e degil 0,97'ye toplaniyor; kalan %3'un secilebilecegi
+  // bir "Diger" secenegi de yok. Normallestirilmezse tum renkleri isaretlemek
+  // "Fark etmez"e esit olmuyor, sessizce %3 dusuruyordu. Etnik kokene bagli
+  // kosullu dagilimda da toplam 1 olmayabildigi icin kendi toplamina boluyoruz.
+  let t = 0,
+    n = 0;
+  for (const a of ["siyah", "koyukahve", "kumral", "sari", "kizil"]) {
+    const i = hairColorProb(a);
+    n += i, e.has(a) && (t += i)
+  }
+  return n > 0 ? Math.min(t / n, 1) : 1
 }
 const BLUE_EYE_BY_HAIR = {
   sari: .4,
@@ -2882,11 +2896,13 @@ function compute() {
     l = i;
   a < .9995 && r.push({
     id: "boy",
-    label: `Boy ${slider.boyMin} ile ${slider.boyMax} cm`,
+    label: slider.boyMin === slider.boyMax ? `Boy ${slider.boyMin} cm` :
+      `Boy ${slider.boyMin} ile ${slider.boyMax} cm`,
     p: a
   }), i < .9995 && r.push({
     id: "iq",
-    label: `IQ ${slider.iqMin} ile ${slider.iqMax}`,
+    label: slider.iqMin === slider.iqMax ? `IQ ${slider.iqMin}` :
+      `IQ ${slider.iqMin} ile ${slider.iqMax}`,
     p: i
   });
   for (const e of GROUPS) {
@@ -2910,7 +2926,7 @@ function compute() {
 }
 
 function heightProbGender(e, t, n) {
-  return heightCdf(n, e) - heightCdf(t, e)
+  return heightCdf(n + BAND, e) - heightCdf(t - BAND, e)
 }
 let cvHeight, ctxHeight, cvIq, ctxIq;
 const DIST_CFG = {
@@ -3404,7 +3420,7 @@ function render() {
     "En az bir cinsiyet seç.", document.getElementById("pctline").textContent = "", document
     .getElementById("rarity").hidden = !0, document.getElementById("funline").hidden = !0,
     document.getElementById("pgridWrap").hidden = !0, document.getElementById("contrib")
-    .innerHTML = "", document.getElementById("mbCount").textContent = ",", document
+    .innerHTML = "", document.getElementById("mbCount").textContent = "0", document
     .getElementById("mbPct").textContent = "Cinsiyet seç", void(animFrom = 0);
   t.classList.toggle("zero", Math.round(e.count) < 1), animateCount(e.count);
   const a = e.count / 64200658 * 100,
@@ -3527,7 +3543,7 @@ document.getElementById("themeBtn").addEventListener("click", () => {
       n.width = e, n.height = t;
       const a = n.getContext("2d"),
         i = "#231a20",
-        r = "#8a7f87",
+        r = "#6e666c",
         o = "#e0405f";
       a.fillStyle = "#f6f3f1", a.fillRect(0, 0, e, t), s(a, 60, 60, 960, 960, 44), a.fillStyle =
         "#ffffff", a.fill(), a.strokeStyle = "#e8e0e1", a.lineWidth = 2, a.stroke(), a.textAlign =
