@@ -530,25 +530,33 @@ input[type=text]:focus{border-color:var(--accent)}
   $('tabStreak').addEventListener('click', function(){ curBoard='streak'; this.classList.add('on'); $('tabTries').classList.remove('on'); loadBoards(); });
   $('tabTries').addEventListener('click', function(){ curBoard='tries'; this.classList.add('on'); $('tabStreak').classList.remove('on'); loadBoards(); });
 
+  var unwatch=null;
+  function renderBoard(list){
+    var body=$('lbBody'), note=$('lbNote'), html='';
+    // Yalnızca ilk 100 gösterilir (katılımcı sayısı belirtilmez)
+    var top=(list||[]).slice(0,100);
+    if(!top.length){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Henüz kimse yok'+(curBoard==='streak'?', ilk sen ol!':'')+'</p>'; }
+    else{
+      top.forEach(function(r,i){
+        var you = user && r.uid===user.uid;
+        var val = curBoard==='streak' ? (r.bestStreak+' <small>gün</small>') : (((''+r.avgTries).replace('.',','))+' <small>ort. tahmin</small>');
+        html+='<div class="row'+(you?' you':'')+'"><div class="rank'+(i<3?' top':'')+'">'+(i+1)+'</div><div class="rav">'+esc((r.name||'?').charAt(0).toUpperCase())+'</div><div class="rname">'+esc(r.name||'?')+'</div><div class="rval">'+val+'</div></div>';
+      });
+      body.innerHTML='<div class="lbscroll">'+html+'</div>';
+    }
+    note.textContent = curBoard==='streak' ? '' : 'Liderlik tablosuna girebilmek için en az 10 gün oynamanız gerekir.';
+  }
   function loadBoards(){
     var body=$('lbBody'), note=$('lbNote');
-    if(!(window.KB&&KB.board)){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yalnızca canlı sitede çalışır. Giriş yapıp sıralamaya katılabilirsin.</p>'; note.textContent=''; return; }
+    if(!(window.KB&&(KB.watch||KB.board))){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yalnızca canlı sitede çalışır. Giriş yapıp sıralamaya katılabilirsin.</p>'; note.textContent=''; return; }
+    if(unwatch){ try{unwatch()}catch(e){} unwatch=null; }
     body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Yükleniyor…</p>';
-    KB.board(curBoard).then(function(list){
-      var html='';
-      // Yalnızca ilk 100 gösterilir (katılımcı sayısı belirtilmez)
-      var top=(list||[]).slice(0,100);
-      if(!top.length){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Henüz kimse yok'+(curBoard==='streak'?', ilk sen ol!':'')+'</p>'; }
-      else{
-        top.forEach(function(r,i){
-          var you = user && r.uid===user.uid;
-          var val = curBoard==='streak' ? (r.bestStreak+' <small>gün</small>') : (((''+r.avgTries).replace('.',','))+' <small>ort. tahmin</small>');
-          html+='<div class="row'+(you?' you':'')+'"><div class="rank'+(i<3?' top':'')+'">'+(i+1)+'</div><div class="rav">'+esc((r.name||'?').charAt(0).toUpperCase())+'</div><div class="rname">'+esc(r.name||'?')+'</div><div class="rval">'+val+'</div></div>';
-        });
-        body.innerHTML='<div class="lbscroll">'+html+'</div>';
-      }
-      note.textContent = curBoard==='streak' ? '' : 'Liderlik tablosuna girebilmek için en az 10 gün oynamanız gerekir.';
-    }).catch(function(){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yüklenemedi.</p>'; });
+    if(KB.watch){
+      // Canlı dinleyici: karşı taraf güncelleyince tablo kendini yeniler, bayat değer görünmez
+      unwatch=KB.watch(curBoard, renderBoard, function(){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yüklenemedi.</p>'; });
+    } else {
+      KB.board(curBoard).then(renderBoard).catch(function(){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yüklenemedi.</p>'; });
+    }
   }
 
   loadBoards();
@@ -559,7 +567,7 @@ input[type=text]:focus{border-color:var(--accent)}
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, where, getDocs, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   try {
     const firebaseConfig = {
       apiKey: "AIzaSyD_MIekQmU9wOtam8vrckMyhgjHKD_ZR9o",
@@ -585,17 +593,22 @@ input[type=text]:focus{border-color:var(--accent)}
       setName: async (name) => { if(!cur) return; await setDoc(doc(db,'players',cur.uid), { name }, { merge:true }); },
       // İki yönlü senkron: istemci geçmişi birleştirip toplamları hesaplar, burası ham yazar
       save: async (payload) => { if(!cur) return; await setDoc(doc(db,'players',cur.uid), Object.assign({updatedAt: serverTimestamp()}, payload), { merge:true }); },
-      board: async (type) => {
+      _q: (type) => {
         const col = collection(db,'players');
-        const q = (type==='tries')
+        return (type==='tries')
           ? query(col, where('eligible','==',true), orderBy('avgTries','asc'), limit(100))
           : query(col, orderBy('bestStreak','desc'), limit(100));
-        const qs = await getDocs(q); const out = [];
+      },
+      _map: (type, qs) => {
+        const out = [];
         qs.forEach(dd => { const x = dd.data(); out.push({ uid: dd.id, name: x.name, bestStreak: x.bestStreak||0, avgTries: x.avgTries, avgSolveMs: x.avgSolveMs }); });
         // "En az tahmin"de eşit ortalamalar: daha kısa sürede bilen üstte (süre verisi olmayan sona)
         if(type==='tries') out.sort((a,b)=>{ const t=(a.avgTries||0)-(b.avgTries||0); if(t)return t; return (a.avgSolveMs==null?Infinity:a.avgSolveMs)-(b.avgSolveMs==null?Infinity:b.avgSolveMs); });
         return out;
-      }
+      },
+      board: async (type) => { const qs = await getDocs(window.KB._q(type)); return window.KB._map(type, qs); },
+      // Canlı dinleyici: kim güncellerse tüm cihazlarda tablo anında yenilenir (bayat değer kalmaz)
+      watch: (type, cb, err) => onSnapshot(window.KB._q(type), (qs) => cb(window.KB._map(type, qs)), (e) => { if(err) err(e); })
     };
     window.dispatchEvent(new CustomEvent('kb-ready'));
   } catch(e) { /* Firebase yüklenemezse oyun yine çalışır, leaderboard gizli kalır */ }
