@@ -114,6 +114,10 @@ footer a{color:var(--muted);margin:0 7px;text-decoration:none}
 .spin{display:inline-block;width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 </style>
+<script>/* Consent Mode v2: onay gelene kadar reklam ve olcum depolamasi kapali. gtag yuklenmeden once calismali. */
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}
+(function(){var c="denied";try{if(localStorage.getItem("kriterin_cerez")==="kabul")c="granted"}catch(e){}
+gtag("consent","default",{ad_storage:c,ad_user_data:c,ad_personalization:c,analytics_storage:c,wait_for_update:500});})();</script>
 </head>
 <body>
 <nav class="sitenav"><div class="sitenav-in">
@@ -990,5 +994,6 @@ async function renderResults(id){
 }
 </script>
 <script src="/authnav.js" defer></script>
+<script src="/cerez.js" defer></script>
 </body>
 </html>
