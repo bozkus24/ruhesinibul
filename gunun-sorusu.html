@@ -566,6 +566,7 @@ input[type=text]:focus{border-color:var(--accent)}
 <!-- Firebase (Auth + Firestore) -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, where, getDocs, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   try {
@@ -578,6 +579,8 @@ input[type=text]:focus{border-color:var(--accent)}
       appId: "1:46765593126:web:25738b3ebc5f1168f0cce7"
     };
     const app = initializeApp(firebaseConfig);
+    // App Check: istekleri gerçek tarayıcıdan geldiğini kanıtlar (bot/script/spam engeli)
+    try{ initializeAppCheck(app, { provider: new ReCaptchaV3Provider('6LdNungtAAAAAJ3h5_uGSEiUnyMGpk0Vns_DlOQn'), isTokenAutoRefreshEnabled: true }); }catch(e){}
     const auth = getAuth(app);
     const db = getFirestore(app);
     let cur = null;

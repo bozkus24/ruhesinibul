@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== Günün Sorusu oyuncuları =====
+    match /players/{playerId} {
+      // Liderlik tablosu herkese açık okunur
+      allow read: if true;
+
+      // Yalnızca giriş yapmış kullanıcı KENDİ dokümanını yazar.
+      // Sayısal alanlar zorunlu sayı + makul aralık: string XSS payload'ı ve
+      // absürt "hile" değerleri (bestStreak:99999) yazımda reddedilir.
+      allow create, update: if request.auth != null
+        && request.auth.uid == playerId
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 20
+        && (!('bestStreak' in request.resource.data)
+            || (request.resource.data.bestStreak is number
+                && request.resource.data.bestStreak >= 0
+                && request.resource.data.bestStreak <= 3650))
+        && (!('streak' in request.resource.data)
+            || (request.resource.data.streak is number
+                && request.resource.data.streak >= 0
+                && request.resource.data.streak <= 3650))
+        && (!('avgTries' in request.resource.data)
+            || (request.resource.data.avgTries is number
+                && request.resource.data.avgTries >= 1
+                && request.resource.data.avgTries <= 5))
+        && (!('eligible' in request.resource.data)
+            || request.resource.data.eligible is bool);
+
+      allow delete: if false;
+    }
+
+    // ===== Anketler =====
+    match /surveys/{surveyId} {
+      // Linki olan herkes okuyabilir
+      allow read: if true;
+
+      // Oluşturma: alan/tip doğrulama; owner ya boş ya kendi uid'i.
+      // (Girişsiz oluşturma akışı korunur; spam engeli App Check katmanındadır.)
+      allow create: if request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 40
+        && request.resource.data.ownerName is string
+        && request.resource.data.ownerName.size() <= 40
+        && request.resource.data.key is string
+        && request.resource.data.criteria is list
+        && request.resource.data.criteria.size() <= 30
+        && (request.resource.data.owner == ''
+            || (request.auth != null
+                && request.resource.data.owner == request.auth.uid));
+
+      // Güncelleme SADECE iki senaryoda:
+      allow update: if
+        // (a) sahiplenme: yalnız 'owner' alanı, boştan -> kendi uid'ine
+        ( request.auth != null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owner'])
+          && (!('owner' in resource.data) || resource.data.owner == '')
+          && request.resource.data.owner == request.auth.uid )
+        ||
+        // (b) yumuşak silme: yalnız 'deleted'+'delKey', DOĞRU anahtarla
+        ( request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted','delKey'])
+          && request.resource.data.deleted == true
+          && request.resource.data.delKey == resource.data.key );
+
+      // Sert silme yok, yalnızca yumuşak silme (yukarıda)
+      allow delete: if false;
+
+      // ===== Cevaplar =====
+      match /responses/{responseId} {
+        allow read: if true;
+        allow create: if request.resource.data.name is string
+          && request.resource.data.name.size() <= 40
+          && request.resource.data.score is number
+          && request.resource.data.score >= 0
+          && request.resource.data.score <= 100
+          && request.resource.data.answers is map;
+        // Cevap değiştirilemez / silinemez
+        allow update, delete: if false;
+      }
+    }
+  }
+}

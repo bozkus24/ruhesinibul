@@ -182,9 +182,12 @@ const Store=(function(){
   async function init(){
     try{
       const app=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+      const appCheck=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js");
       const store=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
       const cfg={apiKey:"AIzaSyD_MIekQmU9wOtam8vrckMyhgjHKD_ZR9o",authDomain:"kriterin.firebaseapp.com",projectId:"kriterin",storageBucket:"kriterin.firebasestorage.app",messagingSenderId:"46765593126",appId:"1:46765593126:web:25738b3ebc5f1168f0cce7"};
       const a=app.initializeApp(cfg,"anket");
+      // App Check: istekleri gerçek tarayıcıdan geldiğini kanıtlar (bot/script/spam engeli)
+      try{ appCheck.initializeAppCheck(a,{provider:new appCheck.ReCaptchaV3Provider('6LdNungtAAAAAJ3h5_uGSEiUnyMGpk0Vns_DlOQn'),isTokenAutoRefreshEnabled:true}); }catch(e){}
       db=store.getFirestore(a); fs=store; ready=true;
       // Google girişi (Günün Sorusu ile aynı proje/oturum)
       try{
