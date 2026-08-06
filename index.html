@@ -27,7 +27,13 @@
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;min-height:100vh}
-.theme-btn{position:fixed;top:16px;right:16px;z-index:5;border:1px solid var(--line);background:var(--surface);color:var(--ink);width:40px;height:40px;border-radius:11px;cursor:pointer;font-size:16px;box-shadow:var(--shadow)}
+.topbar{border-bottom:1px solid var(--line);background:var(--surface)}
+.topbar-in{max-width:600px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:11px 16px}
+.topbar .tb-logo img{width:30px;height:30px;border-radius:9px;display:block}
+.topbar .sp{flex:1}
+.theme-row{margin-top:8px}
+.theme-row-in{max-width:600px;margin:0 auto;padding:0 16px;display:flex;justify-content:flex-end}
+.theme-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);width:40px;height:40px;border-radius:11px;cursor:pointer;font-size:16px;box-shadow:var(--shadow)}
 .hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 18px 28px;max-width:600px;margin:0 auto;width:100%}
 .brandline{display:flex;align-items:center;gap:12px;margin-bottom:8px}
 .brandline img{width:46px;height:46px;border-radius:13px}
@@ -55,11 +61,15 @@ footer a:hover{color:var(--accent)}
 </style>
 </head>
 <body>
-<button class="theme-btn" id="themeBtn" title="Temayı değiştir" aria-label="Temayı değiştir">◐</button>
-<div id="authNav" style="position:fixed;top:20px;left:16px;z-index:5"></div>
+<header class="topbar"><div class="topbar-in">
+  <a class="tb-logo" href="/" aria-label="Kriterin"><img src="/favicon-96.png" alt="Kriterin" width="30" height="30"></a>
+  <span class="sp"></span>
+  <span id="authNav"></span>
+</div></header>
+<div class="theme-row"><div class="theme-row-in"><button class="theme-btn" id="themeBtn" title="Temayı değiştir" aria-label="Temayı değiştir">◐</button></div></div>
 
 <main class="hero">
-  <div class="brandline"><img src="/favicon-192.png" alt="" width="46" height="46"><span class="bn">Kriterin</span></div>
+  <div class="brandline"><span class="bn">Kriterin</span></div>
   <p class="tagline">Kriterlerini sayılarla test et<br>Hesapla, Tahmin et, Çevrendekileri sına.</p>
 
   <nav class="doors" aria-label="Kriterin bölümleri">

@@ -14,7 +14,14 @@
   // Küçük stil (bir kez enjekte)
   if(!document.getElementById('authnav-css')){
     var st=document.createElement('style'); st.id='authnav-css';
-    st.textContent='#authNav{display:inline-flex;align-items:center;gap:9px}#authNav .an-name{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:13.5px;color:var(--accent)}#authNav a.an-act{cursor:pointer;color:var(--muted);font-weight:600;font-size:13.5px;text-decoration:none;white-space:nowrap}#authNav a.an-act:hover{color:var(--accent)}';
+    st.textContent='#authNav{position:relative;display:inline-flex;align-items:center}'
+      +'#authNav a.an-login{cursor:pointer;color:var(--muted);font-weight:600;font-size:13.5px;text-decoration:none;white-space:nowrap}#authNav a.an-login:hover{color:var(--accent)}'
+      +'#authNav .an-btn{display:inline-flex;align-items:center;gap:6px;cursor:pointer;background:none;border:0;padding:4px 2px;font:inherit}'
+      +'#authNav .an-name{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:13.5px;color:var(--accent)}'
+      +'#authNav .an-caret{font-size:10px;color:var(--muted);transition:transform .18s}#authNav .an-btn[aria-expanded="true"] .an-caret{transform:rotate(180deg)}'
+      +'#authNav .an-drop{position:absolute;top:100%;right:0;margin-top:8px;min-width:150px;background:var(--surface,#fff);border:1px solid var(--line,#eee);border-radius:11px;box-shadow:0 10px 30px rgba(0,0,0,.14);padding:5px;z-index:50}'
+      +'#authNav .an-drop[hidden]{display:none}'
+      +'#authNav .an-item{display:block;padding:9px 12px;border-radius:8px;color:var(--ink,#222);text-decoration:none;font-weight:600;font-size:13.5px;cursor:pointer;white-space:nowrap}#authNav .an-item:hover{background:var(--accent-soft,rgba(0,0,0,.05));color:var(--accent)}';
     document.head.appendChild(st);
   }
 
@@ -31,15 +38,23 @@
     return authP;
   }
 
+  function closeMenu(){ var d=slot.querySelector('.an-drop'); var btn=slot.querySelector('.an-btn'); if(d)d.hidden=true; if(btn)btn.setAttribute('aria-expanded','false'); }
+  function onDocClick(ev){ if(!slot.contains(ev.target)) closeMenu(); }
+
   function render(){
     var u=getU();
     if(u && u.name){
-      slot.innerHTML='<span class="an-name" title="'+esc(u.name)+'">'+esc(u.name)+'</span><a class="lnk an-act" href="#" data-logout>Çıkış</a>';
+      slot.innerHTML='<button class="an-btn" type="button" aria-haspopup="true" aria-expanded="false"><span class="an-name" title="'+esc(u.name)+'">'+esc(u.name)+'</span><span class="an-caret" aria-hidden="true">▾</span></button>'
+        +'<div class="an-drop" hidden role="menu"><a class="an-item" href="#" role="menuitem" data-logout>Çıkış yap</a></div>';
+      var btn=slot.querySelector('.an-btn'), drop=slot.querySelector('.an-drop');
+      btn.addEventListener('click', function(e){ e.preventDefault(); var open=drop.hidden; drop.hidden=!open; btn.setAttribute('aria-expanded', open?'true':'false'); });
+      slot.querySelector('[data-logout]').addEventListener('click', onLogout);
+      document.addEventListener('click', onDocClick);
     } else {
-      slot.innerHTML='<a class="lnk an-act" href="#" data-login>Giriş</a>';
+      slot.innerHTML='<a class="an-login" href="#" data-login>Giriş</a>';
+      slot.querySelector('[data-login]').addEventListener('click', onLogin);
+      document.removeEventListener('click', onDocClick);
     }
-    var li=slot.querySelector('[data-login]'); if(li) li.addEventListener('click', onLogin);
-    var lo=slot.querySelector('[data-logout]'); if(lo) lo.addEventListener('click', onLogout);
   }
 
   function onLogin(e){
