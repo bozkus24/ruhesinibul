@@ -119,8 +119,7 @@ footer a{color:var(--muted);margin:0 7px;text-decoration:none}
 <nav class="sitenav"><div class="sitenav-in">
   <a class="nb" href="/"><img src="/favicon-96.png" alt="" width="24" height="24"><span>Kriterin</span></a>
   <span class="sp"></span>
-  <a class="lnk" href="/hakkimizda.html">Hakkımızda</a>
-  <a class="lnk" href="mailto:kriterincom@gmail.com">İletişim</a>
+  <span id="authNav"></span>
 </div></nav>
 
 <main class="wrap">
@@ -131,7 +130,7 @@ footer a{color:var(--muted);margin:0 7px;text-decoration:none}
 </main>
 
 <footer>
-  <div><a href="/">Ana sayfa</a><a href="/gunun-sorusu.html">Günün Sorusu</a><a href="/hakkimizda.html">Hakkımızda</a><a href="/gizlilik-politikasi.html">Gizlilik</a></div>
+  <div><a href="/">Ana sayfa</a><a href="/gunun-sorusu.html">Günün Sorusu</a><a href="/hakkimizda.html">Hakkımızda</a><a href="/gizlilik-politikasi.html">Gizlilik</a><a href="mailto:kriterincom@gmail.com">İletişim</a></div>
   <div style="margin-top:8px">Kriterin · Kendi kriterlerinden anketini oluştur, paylaş.</div>
 </footer>
 
@@ -185,7 +184,7 @@ const Store=(function(){
       const appCheck=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js");
       const store=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
       const cfg={apiKey:"AIzaSyD_MIekQmU9wOtam8vrckMyhgjHKD_ZR9o",authDomain:"kriterin.firebaseapp.com",projectId:"kriterin",storageBucket:"kriterin.firebasestorage.app",messagingSenderId:"46765593126",appId:"1:46765593126:web:25738b3ebc5f1168f0cce7"};
-      const a=app.initializeApp(cfg,"anket");
+      let a; try{ a=app.getApp(); }catch(_e){ a=app.initializeApp(cfg); } // varsayılan uygulama (tüm sayfalarla ortak oturum)
       // App Check: istekleri gerçek tarayıcıdan geldiğini kanıtlar (bot/script/spam engeli)
       try{ appCheck.initializeAppCheck(a,{provider:new appCheck.ReCaptchaV3Provider('6LdNungtAAAAAJ3h5_uGSEiUnyMGpk0Vns_DlOQn'),isTokenAutoRefreshEnabled:true}); }catch(e){}
       db=store.getFirestore(a); fs=store; ready=true;
@@ -194,7 +193,7 @@ const Store=(function(){
         am=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
         auth=am.getAuth(a);
         let first=true;
-        am.onAuthStateChanged(auth,u=>{ curUser=u?{uid:u.uid,name:u.displayName,email:u.email}:null; if(first){first=false;authReadyRes();} userSubs.forEach(cb=>{try{cb(curUser)}catch(e){}}); },()=>{ if(first){first=false;authReadyRes();} });
+        am.onAuthStateChanged(auth,u=>{ curUser=u?{uid:u.uid,name:u.displayName,email:u.email}:null; try{ if(u)localStorage.setItem('kriterin_user',JSON.stringify({name:u.displayName||'Hesabım'})); else localStorage.removeItem('kriterin_user'); window.dispatchEvent(new Event('kriterin-auth')); }catch(e){} if(first){first=false;authReadyRes();} userSubs.forEach(cb=>{try{cb(curUser)}catch(e){}}); },()=>{ if(first){first=false;authReadyRes();} });
         setTimeout(()=>authReadyRes(),3000);
       }catch(e){ authReadyRes(); }
     }catch(e){ ready=false; authReadyRes(); } // offline/önizleme → localStorage
@@ -475,6 +474,7 @@ function renderCreate(){
         <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.4 5.4 2.6 13.2l7.8 6.1C12.2 13.6 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.1-3.8 6.5-9.4 6.5-16z"/><path fill="#FBBC05" d="M10.4 28.3c-.5-1.4-.8-2.9-.8-4.3s.3-3 .8-4.3l-7.8-6.1C1 16.5 0 20.1 0 24s1 7.5 2.6 10.4l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.6l-7.1-5.5c-2 1.3-4.6 2.1-8.2 2.1-6.4 0-11.8-4.1-13.6-9.8l-7.8 6.1C6.4 42.6 14.6 48 24 48z"/></svg>
         Google ile giriş yap
       </button>
+      <p class="msg err" data-authmsg style="display:none;margin:10px 0 0">Anketini oluşturmak için önce buradan Google ile giriş yap.</p>
     </div>
     <div data-signed style="display:none">
       <div class="msg ok" style="margin:0"><b data-gname></b> olarak giriş yaptın. <a href="#" id="gLogout" style="font-weight:600">çıkış</a></div>
@@ -579,8 +579,9 @@ function renderCreate(){
     let u=null, online=false;
     try{ online=await Store.online(); u=await Store.getUser(); }catch(e){}
     if(online && !u){
-      err.textContent="Sonuçlarını görebilmek için önce Google ile giriş yap (yukarıdaki karttan).";
-      err.style.display="block";
+      // Uyarı, giriş kartının altında görünsün (site zaten oraya kaydırıyor)
+      const authMsg=document.querySelector("[data-authmsg]");
+      if(authMsg) authMsg.style.display="block";
       const ac=document.querySelector("[data-auth]");
       (ac||err).scrollIntoView({behavior:"smooth",block:"center"});
       return;
@@ -984,5 +985,6 @@ async function renderResults(id){
   await load();
 }
 </script>
+<script src="/authnav.js" defer></script>
 </body>
 </html>

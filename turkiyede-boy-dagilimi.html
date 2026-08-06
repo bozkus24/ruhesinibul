@@ -112,7 +112,7 @@ footer a:hover{color:var(--accent)}
   <span class="sp"></span>
   <a class="lnk home" href="/hesaplayici.html">Hesaplayıcı</a>
   <a class="lnk" href="/yazilar.html">Yazılar</a>
-  <a class="lnk" href="/hakkimizda.html">Hakkımızda</a>
+  <span id="authNav"></span>
 </div></div>
 <div class="wrap"><button class="theme-btn" id="themeBtn" type="button" title="Temayı değiştir" aria-label="Temayı değiştir" style="float:right;margin:2px 0 10px 12px">◐</button>
 <nav class="crumb" aria-label="İçerik yolu" style="font-size:13px;color:var(--muted);margin:2px 0 14px"><a href="/" style="color:var(--muted);text-decoration:none">Ana sayfa</a> › <a href="/yazilar.html" style="color:var(--muted);text-decoration:none">Yazılar</a> › <span>Türkiye'de boy dağılımı</span></nav>
@@ -213,5 +213,6 @@ footer a:hover{color:var(--accent)}
 })();
 </script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}</script>
+<script src="/authnav.js" defer></script>
 </body>
 </html>
