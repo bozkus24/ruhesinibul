@@ -497,14 +497,20 @@ input[type=text]:focus{border-color:var(--accent)}
 
   // ===== İki yönlü Google senkronu: sunucudaki gün-gün geçmişle birleştir =====
   var gUser=null, syncing=false, lastSyncSig=null;
-  // Aynı gün iki kayıt varsa ÖNCE kaydedilen (sunucudaki) kazanır.
-  // Eskiden az tahminli olan seçiliyordu; bu, çıkış yapıp misafir olarak günü
-  // tekrar oynayan birinin daha iyi sonucu sunucuya geçirmesine izin veriyordu.
-  // Gün başına tek hak kuralının karşılığı budur.
+  // Aynı gün iki kayıt varsa kural: SUNUCU kazanır (çıkıp misafir olarak tekrar
+  // oynayıp daha az tahminle skoru düşürme hilesini engeller). TEK istisna: "çözdü"
+  // bilgisi asla kaybolmamalı. Yerelde çözülmüş ama sunucuda çözülmemiş görünen bir
+  // gün varsa (başarısız/eksik eski senkron, misafir/ikinci cihaz dokunuşu vb.),
+  // sunucudaki "çözemedi" kaydı yereli ezip "çözüm oranı %0" gösteriyordu. Artık
+  // yerel çözüm korunur; iki taraf da çözmüşse tahmin sayısını yine sunucu belirler.
   function mergeHistory(server, local){
     var m={},k;
     for(k in server) if(Object.prototype.hasOwnProperty.call(server,k)) m[k]=server[k];
-    for(k in local) if(Object.prototype.hasOwnProperty.call(local,k) && !m[k]) m[k]=local[k];
+    for(k in local) if(Object.prototype.hasOwnProperty.call(local,k)){
+      var s=m[k], l=local[k];
+      if(!s){ m[k]=l; }                                  // sunucuda yok → yereli al
+      else if(l && l.solved && !s.solved){ m[k]=l; }     // yerel çözmüş, sunucu çözememiş → çözümü koru
+    }
     return m;
   }
   function syncServer(){
