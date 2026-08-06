@@ -431,7 +431,7 @@ input[type=text]:focus{border-color:var(--accent)}
   if(nick){showGame();}else{document.getElementById('nickInput').focus();}
 
   // ===== İki yönlü Google senkronu: sunucudaki gün-gün geçmişle birleştir =====
-  var gUser=null, syncing=false;
+  var gUser=null, syncing=false, lastSyncSig=null;
   function pickEntry(a,b){ // aynı gün iki kayıt: çözüleni ve az tahminliyi tut
     if(b.solved && !a.solved) return b;
     if(a.solved && !b.solved) return a;
@@ -446,6 +446,9 @@ input[type=text]:focus{border-color:var(--accent)}
   }
   function syncServer(){
     if(syncing || !(gUser && window.KB && KB.getMine && KB.save)) return;
+    // Geçmiş bir önceki senkrondan beri değişmediyse tekrar okuma/yazma yapma (kota tasarrufu).
+    var localSig=JSON.stringify(loadHistory());
+    if(lastSyncSig!==null && localSig===lastSyncSig) return;
     syncing=true;
     KB.getMine().then(function(d){
       var server=(d&&d.history)||{};
@@ -457,9 +460,10 @@ input[type=text]:focus{border-color:var(--accent)}
         totalDays:st.totalDays, solvedCount:st.solvedCount, totalTries:st.totalTries,
         solveMsSum:st.solveMsSum, lastDate:st.lastDate, eligible:st.eligible };
       if(st.avgTries!=null){ payload.avgTries=st.avgTries; payload.avgSolveMs=st.avgSolveMs; }
+      lastSyncSig=JSON.stringify(merged); // bu geçmişi yazdık; aynı kaldığı sürece tekrar yazma
       return KB.save(payload);
     }).then(function(){ try{window.dispatchEvent(new CustomEvent('kb-synced'))}catch(e){} })
-      .catch(function(){}).then(function(){ syncing=false; });
+      .catch(function(){ lastSyncSig=null; }).then(function(){ syncing=false; });
   }
 
   // Google ile giriş yapana takma ad ekranı gösterilmez, Google adı otomatik kullanılır
@@ -530,11 +534,13 @@ input[type=text]:focus{border-color:var(--accent)}
   $('tabStreak').addEventListener('click', function(){ curBoard='streak'; this.classList.add('on'); $('tabTries').classList.remove('on'); loadBoards(); });
   $('tabTries').addEventListener('click', function(){ curBoard='tries'; this.classList.add('on'); $('tabStreak').classList.remove('on'); loadBoards(); });
 
-  var unwatch=null;
+  var unwatch=null, activeType=null, lastList=[];
+  var staticData=null, staticAt=0, boardMode=null, deciding=false;
   function renderBoard(list){
+    lastList=list||[];
     var body=$('lbBody'), note=$('lbNote'), html='';
     // Yalnızca ilk 100 gösterilir (katılımcı sayısı belirtilmez)
-    var top=(list||[]).slice(0,100);
+    var top=lastList.slice(0,100);
     if(!top.length){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Henüz kimse yok'+(curBoard==='streak'?', ilk sen ol!':'')+'</p>'; }
     else{
       top.forEach(function(r,i){
@@ -546,18 +552,42 @@ input[type=text]:focus{border-color:var(--accent)}
     }
     note.textContent = curBoard==='streak' ? '' : 'Liderlik tablosuna girebilmek için en az 10 gün oynamanız gerekir.';
   }
-  function loadBoards(){
+  // Statik (CDN önbellekli) liderlik: her ziyaretçi Firestore yerine bunu okur.
+  function renderCurrent(){ if(staticData) renderBoard(staticData[curBoard]||[]); }
+  function fetchStatic(force){
+    return fetch('/api/leaderboard', force?{cache:'reload'}:{})
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(j){ if(!j||(!j.streak&&!j.tries)) throw 0; staticData={streak:j.streak||[],tries:j.tries||[]}; staticAt=Date.now(); });
+  }
+  function maybeRefreshStatic(force){
+    if(!force && Date.now()-staticAt < 120000) return; // 2 dk'dan yeniyse dokunma
+    fetchStatic(force).then(renderCurrent).catch(function(){});
+  }
+  // Canlı yol (yedek): statik JSON yoksa/çalışmıyorsa Firestore'dan dinle.
+  function liveLoad(){
     var body=$('lbBody'), note=$('lbNote');
     if(!(window.KB&&(KB.watch||KB.board))){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yalnızca canlı sitede çalışır. Giriş yapıp sıralamaya katılabilirsin.</p>'; note.textContent=''; return; }
+    if(unwatch && activeType===curBoard){ renderBoard(lastList); return; }
     if(unwatch){ try{unwatch()}catch(e){} unwatch=null; }
+    activeType=curBoard;
     body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Yükleniyor…</p>';
     if(KB.watch){
-      // Canlı dinleyici: karşı taraf güncelleyince tablo kendini yeniler, bayat değer görünmez
       unwatch=KB.watch(curBoard, renderBoard, function(){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yüklenemedi.</p>'; });
     } else {
       KB.board(curBoard).then(renderBoard).catch(function(){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yüklenemedi.</p>'; });
     }
   }
+  function loadBoards(){
+    if(boardMode==='static'){ renderCurrent(); maybeRefreshStatic(false); return; }
+    if(boardMode==='live'){ liveLoad(); return; }
+    if(deciding) return;
+    deciding=true;
+    $('lbBody').innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Yükleniyor…</p>';
+    // Önce statik özet (ucuz); yoksa canlı dinleyiciye düş (site hiç bozulmaz).
+    fetchStatic(false).then(function(){ boardMode='static'; deciding=false; renderCurrent(); })
+      .catch(function(){ boardMode='live'; deciding=false; liveLoad(); });
+  }
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden && boardMode==='static') maybeRefreshStatic(false); });
 
   loadBoards();
 })();
