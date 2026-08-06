@@ -229,18 +229,20 @@ const Store=(function(){
         const s=await getDoc(doc(db,"surveys",id));
         if(!s.exists())return null;
         const d=s.data();
-        return d.deleted?null:d;
+        if(d.deleted)return null;
+        // Gizli anahtar artık YOK; yalnızca gerekli alanlar döner.
+        return {name:d.name,criteria:d.criteria,ownerName:d.ownerName,owner:d.owner||""};
       }
       const d=lsGet("kriterin_anket_"+id);
-      return d?{name:d.name,criteria:d.criteria,key:d.key,ownerName:d.ownerName}:null;
+      return d?{name:d.name,criteria:d.criteria,ownerName:d.ownerName}:null;
     },
-    // Yumuşak silme: yalnızca gizli anahtarı bilen (kurucu) silebilir.
-    // Kural, delKey === key eşleşmesini ve sadece bu iki alanın değişmesini ister.
-    async deleteSurvey(id,key){
+    // Yumuşak silme: yalnızca owner (Google girişli kurucu) silebilir; kural bunu zorlar.
+    async deleteSurvey(id){
       await initP;
       if(ready&&!id.startsWith("loc_")){
         const {doc,setDoc}=fs;
-        await setDoc(doc(db,"surveys",id),{deleted:true,delKey:key||""},{merge:true});
+        // Yumuşak silme; kural yalnızca owner==uid olana izin verir.
+        await setDoc(doc(db,"surveys",id),{deleted:true},{merge:true});
         return;
       }
       try{localStorage.removeItem("kriterin_anket_"+id)}catch(e){}
@@ -385,22 +387,19 @@ function answerLabel(c,v){
    Tek link: aynı linki kurucu açarsa sonuçlar, diğerleri açarsa anket gelir.
    Kurucu kendi anketine katılamaz; her zaman sonuçları görür.
    Kurucu; bu cihazdan (localStorage) ya da Google hesabından (owner) tanınır.
-   ?k=ANAHTAR → eski sonuç linkleri. */
+   Sonuçlar (katılımcı listesi + cevaplar) yalnızca owner'a görünür (tam gizlilik). */
 const params=new URLSearchParams(location.search);
 const surveyId=params.get("id");
-const adminKey=params.get("k");
-if(surveyId&&adminKey!==null){ renderResults(surveyId,adminKey); }
-else if(surveyId){ routeSurvey(surveyId); }
+if(surveyId){ routeSurvey(surveyId); }
 else { renderCreate(); }
 
 async function routeSurvey(id){
-  const mine=myList()[id];
-  if(mine){ renderResults(id,mine.key||""); return; }
+  if(myList()[id]){ renderResults(id); return; }          // bu cihazda benim anketim
   try{
     const u=await Store.getUser();
     if(u){
       const s=await Store.getSurvey(id);
-      if(s&&s.owner&&s.owner===u.uid){ mySave(id,s.key||"",s.name); renderResults(id,s.key||""); return; }
+      if(s&&s.owner&&s.owner===u.uid){ mySave(id,"",s.name); renderResults(id); return; }
     }
   }catch(e){}
   renderRespond(id);
@@ -442,7 +441,9 @@ function renderCreate(){
       row.querySelector(".trash").addEventListener("click",async function(){
         if(!confirm(`"${m.name||"Anket"}" anketini silmek istediğine emin misin? Linki artık açılmaz, cevaplar erişilmez olur.`))return;
         this.disabled=true;
-        try{ await Store.deleteSurvey(mid,m.key); }catch(e){} // kural yoksa yerelden yine kalkar
+        let ok=true;
+        try{ await Store.deleteSurvey(mid); }catch(e){ ok=false; }
+        if(!ok){ this.disabled=false; alert("Silinemedi. Anketi silmek için, oluştururken kullandığın Google hesabıyla giriş yapmış olman gerekir."); return; }
         myRemove(mid);
         row.remove();
         if(!rowsEl.children.length)card.remove();
@@ -460,16 +461,16 @@ function renderCreate(){
       const local=myList();
       for(const id of Object.keys(local)){ if(!id.startsWith("loc_")) await Store.claimOwner(id); }
       const server=await Store.listMine();
-      server.forEach(s=>mySave(s.id,s.key,s.name,s.at));
+      server.forEach(s=>mySave(s.id,"",s.name,s.at));
       renderMineList();
     }catch(e){ anketSynced=false; }
   }
 
-  // Google giriş kartı (isteğe bağlı), anket ismi kutusunun üstünde
+  // Google giriş kartı (gerekli), anket ismi kutusunun üstünde
   const authCard=h(`<div class="card" data-auth style="display:none">
     <div data-signin>
-      <div class="subtle" style="margin-top:0">Google ile giriş (isteğe bağlı)</div>
-      <p class="hint" style="margin:0 0 10px">Giriş yaparsan anketinin sonuçlarına her cihazından ulaşırsın.</p>
+      <div class="subtle" style="margin-top:0">Önce Google ile giriş yap</div>
+      <p class="hint" style="margin:0 0 10px">Sonuçlar yalnızca sana özel; anketini oluşturmak ve sonuçlarını her cihazdan görmek için giriş gerekir.</p>
       <button type="button" class="btn sec" id="gLogin" style="display:flex;align-items:center;gap:10px">
         <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.4 5.4 2.6 13.2l7.8 6.1C12.2 13.6 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.1-3.8 6.5-9.4 6.5-16z"/><path fill="#FBBC05" d="M10.4 28.3c-.5-1.4-.8-2.9-.8-4.3s.3-3 .8-4.3l-7.8-6.1C1 16.5 0 20.1 0 24s1 7.5 2.6 10.4l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.6l-7.1-5.5c-2 1.3-4.6 2.1-8.2 2.1-6.4 0-11.8-4.1-13.6-9.8l-7.8 6.1C6.4 42.6 14.6 48 24 48z"/></svg>
         Google ile giriş yap
@@ -574,13 +575,23 @@ function renderCreate(){
     if(!ownerName) return fail("Adını yaz.");
     if(criteria.length<1) return fail("En az 1 kriter seç.");
 
+    // Seçenek A: sonuçlar owner'a özel olduğundan, oluşturmak için Google girişi şart (çevrimiçiyken).
+    let u=null, online=false;
+    try{ online=await Store.online(); u=await Store.getUser(); }catch(e){}
+    if(online && !u){
+      err.textContent="Sonuçlarını görebilmek için önce Google ile giriş yap (yukarıdaki karttan).";
+      err.style.display="block";
+      const ac=document.querySelector("[data-auth]");
+      (ac||err).scrollIntoView({behavior:"smooth",block:"center"});
+      return;
+    }
+
     submit.disabled=true; submit.innerHTML='<span class="spin" style="width:16px;height:16px;border-width:2px"></span> Oluşturuluyor…';
     try{
-      const key=Math.random().toString(36).slice(2,12);
-      let owner=""; try{const u=await Store.getUser(); if(u)owner=u.uid;}catch(e){}
-      const id=await Store.createSurvey({name,criteria,key,owner,ownerName});
-      mySave(id,key,name);
-      showLink(id,name,key);
+      const owner=u?u.uid:"";
+      const id=await Store.createSurvey({name,criteria,owner,ownerName});
+      mySave(id,"",name);
+      showLink(id,name);
     }catch(e){
       submit.disabled=false; submit.textContent="Anketi oluştur ve link al";
       fail("Bir hata oldu, tekrar dene.");
@@ -590,7 +601,7 @@ function renderCreate(){
 
   function fail(m){ err.textContent=m; err.style.display="block"; err.scrollIntoView({behavior:"smooth",block:"center"}); }
 
-  function showLink(id,name,key){
+  function showLink(id,name){
     submit.style.display="none";
     const url=location.origin+location.pathname+"?id="+id;
     linkOut.innerHTML="";
@@ -599,7 +610,7 @@ function renderCreate(){
       <div class="msg ok">✓ Anketin hazır! Tek link: arkadaşların açınca anket, sen açınca sonuçlar gelir.</div>
       <div data-share style="margin-top:12px"></div>
       <a class="btn sec" style="text-decoration:none;margin-top:8px" href="${esc(url)}">Sonuçlarını gör →</a>
-      <p class="hint" style="margin:10px 0 0">Sonuçlarda kim katıldı, kaç aldı, ne cevap verdi; hepsini görürsün. Kurucu olarak bu cihazda otomatik tanınırsın; Google girişliysen diğer cihazlarında da.</p>
+      <p class="hint" style="margin:10px 0 0">Sonuçlarda kim katıldı, kaç aldı, ne cevap verdi; hepsini <b>yalnızca sen</b> görürsün. Giriş yaptığın Google hesabıyla sonuçlara <b>her cihazdan</b> ulaşırsın.</p>
       <div style="margin-top:14px"><!-- sosyal medya takip --><style>.xfollow-wrap{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:16px 0 4px}.xfollow{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;border-radius:10px;border:1px solid var(--accent);background:var(--surface);color:var(--accent);text-decoration:none;font-weight:700;font-size:13px;letter-spacing:-.01em;transition:background .15s,color .15s}.xfollow:hover{background:var(--accent);color:#fff}.xfollow svg{width:15px;height:15px;fill:currentColor;flex:none}.xfollow b{font-weight:800}</style><div class="xfollow-wrap"><a class="xfollow" href="https://x.com/kriterincom" target="_blank" rel="noopener" aria-label="Kriterin'i X'te takip et"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> <span><b>@kriterincom</b></span></a><a class="xfollow" href="https://www.tiktok.com/@kriterincom" target="_blank" rel="noopener" aria-label="Kriterin'i TikTok'ta takip et"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.08-.14 1.62.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg> <span><b>@kriterincom</b></span></a></div></div>
     </div>`));
     linkOut.querySelector("[data-share]").appendChild(shareMenu(url));
@@ -841,58 +852,28 @@ async function renderRespond(id){
     return el;
   }
 
-  /* Puan dökümü bilerek gösterilmiyor, katılımcı neyden puan aldığını görmez.
-     Sadece toplam % + liderlik tablosu. */
+  /* Tam gizlilik: katılımcı yalnızca kendi uyum yüzdesini görür.
+     Katılımcı listesi/sıralama yalnızca anketi oluşturana görünür. */
   async function showResult(score,name,revisit){
     const res=h(`<div class="card">
       <div class="result-ring"><div class="big">${fmtScore(score)}<small>%</small></div>
       <div class="mini">${esc(creator||survey.name)} ile uyumun</div></div>
-      <div class="subtle" style="margin-top:10px">Liderlik Tablosu</div>
-      <div data-panel><div class="center" style="padding:24px 0"><span class="spin"></span></div></div>
+      <p class="hint" style="margin:12px 0 0;text-align:center">Cevabın kaydedildi. Sıralama ve katılımcı listesi yalnızca anketi oluşturana görünür.</p>
     </div>`);
     app.appendChild(res);
-    const panel=res.querySelector("[data-panel]");
-    function paintRows(rows){
-      panel.innerHTML="";
-      if(!rows.length){
-        panel.appendChild(h(`<p class="mini center" style="padding:16px 0">Henüz kimse yok. İlk sensin! 🎉</p>`));
-        return;
-      }
-      const wrap=h(`<div class="lbscroll"></div>`);
-      rows.forEach((r,i)=>{
-        const me=(r.name===name&&Math.round(r.score*10)===Math.round(score*10));
-        wrap.appendChild(h(`<div class="lb-row ${i===0?"top1":""} ${me?"me":""}">
-          <span class="lb-rank">${i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1)}</span>
-          <span class="lb-name">${esc(r.name||"?")}</span>
-          <span class="lb-score">%${fmtScore(r.score)}</span>
-        </div>`));
-      });
-      panel.appendChild(wrap);
-    }
-    async function loadRows(){
-      panel.innerHTML='<div class="center" style="padding:24px 0"><span class="spin"></span></div>';
-      let rows=null; try{rows=await Store.getLeaderboard(id);}catch(e){rows=null;}
-      if(rows!==null){ paintRows(rows); return; }
-      // Hata ile "henüz boş"u ayırt et: sorun varsa kullanıcı bilsin, tekrar deneyebilsin
-      panel.innerHTML="";
-      const retry=h(`<div><p class="mini center" style="padding:10px 0 6px">Liderlik tablosu yüklenemedi.</p><button class="btn sec" style="margin-bottom:6px">Tekrar dene</button></div>`);
-      retry.querySelector("button").addEventListener("click",loadRows);
-      panel.appendChild(retry);
-    }
-    await loadRows();
     app.appendChild(h(`<a class="btn data" style="margin-top:14px;text-decoration:none" href="/anket.html">Kendi anketini yap →</a>`));
     app.appendChild(h(`<div style="margin-top:14px">${SOCIAL_HTML}</div>`));
     if(revisit){
-      app.insertBefore(h(`<div class="msg ok">Bu ankete daha önce katıldın, sonucun ve liderlik tablosu aşağıda.</div>`),res);
+      app.insertBefore(h(`<div class="msg ok">Bu ankete daha önce katıldın, sonucun aşağıda.</div>`),res);
     }
   }
 }
 
 /* =========================================================
-   SONUÇLAR MODU (sadece kurucu, ?id=X&k=ANAHTAR)
+   SONUÇLAR MODU (tam gizlilik: yalnızca owner, Google girişli)
    Katılımcılar, skorları ve verdikleri cevaplar.
 ========================================================= */
-async function renderResults(id,k){
+async function renderResults(id){
   app.innerHTML='<div class="center" style="padding:60px 0"><span class="spin"></span></div>';
   let survey; try{ survey=await Store.getSurvey(id); }catch(e){ survey=null; }
   if(!survey){
@@ -900,17 +881,29 @@ async function renderResults(id,k){
       <a class="btn" style="text-decoration:none" href="/anket.html">Kendi anketini oluştur →</a>`;
     return;
   }
-  const mine=myList()[id];
+  const isLocal = id.startsWith("loc_");   // çevrimdışı anket: tek cihaz, gizlilik sorunu yok
   let gu=null; try{ gu=await Store.getUser(); }catch(e){}
-  const okKey=!survey.key || k===survey.key || (mine&&mine.key===survey.key) || (gu&&survey.owner&&gu.uid===survey.owner);
-  if(!okKey){
+  const isOwner = isLocal ? !!myList()[id] : (gu && survey.owner && gu.uid===survey.owner);
+  if(!isOwner){
+    // Bu cihazda benim kaydım var + anket sahipsiz + giriş yaptım → sahiplen ve tekrar dene
+    if(!isLocal && gu && myList()[id] && (!survey.owner||survey.owner==="")){
+      try{ if(await Store.claimOwner(id)) return renderResults(id); }catch(e){}
+    }
     app.innerHTML="";
-    app.appendChild(h(`<div class="top"><h1>Bu sayfa anketin sahibine özel</h1>
-      <p class="lede">Katılımcı listesi ve cevaplar yalnızca kurucuya görünür. Anketi sen oluşturduysan, linki oluşturduğun cihazdan ya da Google girişi yaptığın bir cihazdan aç.</p></div>`));
-    app.appendChild(h(`<a class="btn" style="text-decoration:none" href="${esc(location.origin+location.pathname+"?id="+id)}">Ankete katıl →</a>`));
+    if(!gu && Store.canAuth()){
+      app.appendChild(h(`<div class="top"><h1>Sonuçları görmek için giriş yap</h1>
+        <p class="lede">Katılımcıların listesi ve cevapları yalnızca anketi oluşturana görünür. Bu anketi sen oluşturduysan Google ile giriş yap.</p></div>`));
+      const btn=h(`<button class="btn">Google ile giriş yap</button>`);
+      btn.addEventListener("click",async()=>{ btn.disabled=true; try{ await Store.signIn(); renderResults(id); }catch(e){ btn.disabled=false; } });
+      app.appendChild(btn);
+    } else {
+      app.appendChild(h(`<div class="top"><h1>Bu sayfa anketin sahibine özel</h1>
+        <p class="lede">Katılımcı listesi ve cevaplar yalnızca kurucuya görünür.</p></div>`));
+      app.appendChild(h(`<a class="btn" style="text-decoration:none" href="${esc(location.origin+location.pathname+"?id="+id)}">Ankete katıl →</a>`));
+    }
     return;
   }
-  mySave(id,survey.key||"",survey.name);
+  mySave(id,"",survey.name);
 
   app.innerHTML="";
   const shareUrl=location.origin+location.pathname+"?id="+id;

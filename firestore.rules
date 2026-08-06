@@ -34,17 +34,18 @@ service cloud.firestore {
 
     // ===== Anketler =====
     match /surveys/{surveyId} {
-      // Linki olan herkes okuyabilir
+      // İsim + kriterler herkese açık okunur (ankete katılmak için gerekli).
+      // Gizli anahtar artık YOK; hassas veri (cevaplar) responses altında kilitli.
       allow read: if true;
 
       // Oluşturma: alan/tip doğrulama; owner ya boş ya kendi uid'i.
-      // (Girişsiz oluşturma akışı korunur; spam engeli App Check katmanındadır.)
+      // (Girişsiz oluşturma mümkün ama sonuçları görmek için sonradan giriş şart;
+      //  spam engeli App Check katmanındadır.)
       allow create: if request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 40
         && request.resource.data.ownerName is string
         && request.resource.data.ownerName.size() <= 40
-        && request.resource.data.key is string
         && request.resource.data.criteria is list
         && request.resource.data.criteria.size() <= 30
         && (request.resource.data.owner == ''
@@ -59,17 +60,21 @@ service cloud.firestore {
           && (!('owner' in resource.data) || resource.data.owner == '')
           && request.resource.data.owner == request.auth.uid )
         ||
-        // (b) yumuşak silme: yalnız 'deleted'+'delKey', DOĞRU anahtarla
-        ( request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted','delKey'])
-          && request.resource.data.deleted == true
-          && request.resource.data.delKey == resource.data.key );
+        // (b) yumuşak silme: yalnız 'deleted', SADECE owner
+        ( request.auth != null
+          && resource.data.owner == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted'])
+          && request.resource.data.deleted == true );
 
       // Sert silme yok, yalnızca yumuşak silme (yukarıda)
       allow delete: if false;
 
-      // ===== Cevaplar =====
+      // ===== Cevaplar (TAM GİZLİLİK) =====
       match /responses/{responseId} {
-        allow read: if true;
+        // Cevapları SADECE anketi oluşturan (owner) okuyabilir.
+        allow read: if request.auth != null
+          && get(/databases/$(database)/documents/surveys/$(surveyId)).data.owner == request.auth.uid;
+        // Katılımcı cevap yazabilir (giriş şart değil; App Check + alan doğrulama korur).
         allow create: if request.resource.data.name is string
           && request.resource.data.name.size() <= 40
           && request.resource.data.score is number
