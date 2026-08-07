@@ -4,8 +4,13 @@ service cloud.firestore {
 
     // ===== Günün Sorusu oyuncuları =====
     match /players/{playerId} {
-      // Liderlik tablosu herkese açık okunur
-      allow read: if true;
+      // Okuma YALNIZCA dokümanın sahibine. Liderlik verisi, servis hesabıyla
+      // çalışan /api/leaderboard (Netlify function) tarafından üretilir; o
+      // kuralları baypas ettiği için public read'e GEREK YOK. Eskiden
+      // "allow read: if true" idi ve tüm oyuncuların uid+ad+gün-gün OYUN GEÇMİŞİ
+      // dünyaya açıktı (gizlilik sızıntısı + koleksiyonu döngüyle okuyup
+      // okuma kotasını yakma vektörü). Kapatıldı.
+      allow read: if request.auth != null && request.auth.uid == playerId;
 
       // Yalnızca giriş yapmış kullanıcı KENDİ dokümanını yazar.
       // Sayısal alanlar zorunlu sayı + makul aralık: string XSS payload'ı ve
