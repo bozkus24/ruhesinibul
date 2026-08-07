@@ -58,8 +58,8 @@
     # <base> enjeksiyonu (base-uri) ve clickjacking (frame-ancestors) kapalı.
     Content-Security-Policy = "object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
 
-# Görseller (favicon, og.png vb.) uzun süre önbelleklensin — tekrar indirilmesin.
-# Değişirlerse yeni ad ver (ör. og-v2.png) ya da bu süreyi düşür.
+# Görseller (favicon, og-v2.png vb.) uzun süre önbelleklensin — tekrar indirilmesin.
+# Değişirlerse yeni ad ver (ör. og-v3.png) ya da bu süreyi düşür.
 [[headers]]
   for = "/*.png"
   [headers.values]
@@ -76,10 +76,11 @@
   [headers.values]
     Cache-Control = "public, max-age=604800"
 
-# Service worker: saatte bir kontrol (her gezinmede yeniden indirilmesin ama
-# güncellemeler ~1 saatte yayılsın). Kredi/istek tasarrufu için no-cache yerine.
+# JS (authnav.js, cerez.js, sw.js): saatte bir tazelik kontrolü. Böylece dosya
+# içeriği değişince "?v=" elle artırılmasa bile güncelleme en geç ~1 saatte
+# kendiliğinden yayılır — elle cache-bust unutma footgun'u ortadan kalkar.
 [[headers]]
-  for = "/sw.js"
+  for = "/*.js"
   [headers.values]
     Cache-Control = "public, max-age=3600"
 
