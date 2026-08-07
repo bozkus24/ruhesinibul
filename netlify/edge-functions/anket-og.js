@@ -33,11 +33,14 @@ export default async (request, context) => {
   const title = "Flörtünü Test Et";
   const desc = esc(name + " kriterlerini belirledi. Ankete katıl; uyum yüzdeni ve liderlik tablosunu gör!");
   let html = await res.text();
+  // Fonksiyon-replacer kullan: değiştirme metnindeki "$" ($1, $&, $' vb.) özel
+  // kalıp olarak yorumlanmasın. desc = esc(name+...) ve esc "$" kaçmadığından,
+  // anket adı "$" içerirse string-replace'te çıktı bozulur/enjekte olurdu.
   html = html
-    .replace(/<title>[^<]*<\/title>/, "<title>" + title + "</title>")
-    .replace(/(property="og:title" content=")[^"]*(")/, "$1" + title + "$2")
-    .replace(/(property="og:description" content=")[^"]*(")/, "$1" + desc + "$2")
-    .replace(/(name="description" content=")[^"]*(")/, "$1" + desc + "$2");
+    .replace(/<title>[^<]*<\/title>/, () => "<title>" + title + "</title>")
+    .replace(/(property="og:title" content=")[^"]*(")/, (m, a, b) => a + title + b)
+    .replace(/(property="og:description" content=")[^"]*(")/, (m, a, b) => a + desc + b)
+    .replace(/(name="description" content=")[^"]*(")/, (m, a, b) => a + desc + b);
 
   const headers = new Headers(res.headers);
   headers.delete("content-length");
