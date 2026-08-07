@@ -59,16 +59,36 @@
   }
 
   var cfg={apiKey:"AIzaSyD_MIekQmU9wOtam8vrckMyhgjHKD_ZR9o",authDomain:"kriterin.firebaseapp.com",projectId:"kriterin",storageBucket:"kriterin.firebasestorage.app",messagingSenderId:"46765593126",appId:"1:46765593126:web:25738b3ebc5f1168f0cce7"};
-  var authP=null;
-  function loadAuth(){
-    if(authP) return authP;
-    authP=(async function(){
+  var fbP=null;
+  // Firebase yalnızca gerekince (giriş / isim kaydetme) yüklenir; sayfa açılışında değil.
+  // Auth + Firestore birlikte gelir: özel ad players/{uid}.name'de saklanır, böylece
+  // aynı hesapla (mail) başka cihaz/oturumda da kalıcı olur.
+  function loadFB(){
+    if(fbP) return fbP;
+    fbP=(async function(){
       var appMod=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
       var authMod=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+      var fsMod=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
       var app; try{ app=appMod.getApp(); }catch(e){ app=appMod.initializeApp(cfg); }
-      return { m:authMod, auth:authMod.getAuth(app) };
+      return { m:authMod, auth:authMod.getAuth(app), fs:fsMod, db:fsMod.getFirestore(app) };
     })();
-    return authP;
+    return fbP;
+  }
+  function fetchServerName(x, uid){
+    if(!uid) return Promise.resolve('');
+    return x.fs.getDoc(x.fs.doc(x.db,'players',uid))
+      .then(function(s){ var d=s.exists()&&s.data(); return d&&d.name ? String(d.name).trim() : ''; })
+      .catch(function(){ return ''; });
+  }
+  function saveServerName(x, uid, name){
+    if(!uid) return Promise.resolve();
+    return x.fs.setDoc(x.fs.doc(x.db,'players',uid), {name:name}, {merge:true}).catch(function(){});
+  }
+  // Kayıtta uid gerekli: kriterin_user'da yoksa oturumdan çöz.
+  function resolveUid(x){
+    var u=getU(); if(u&&u.uid) return Promise.resolve(u.uid);
+    if(x.auth.currentUser) return Promise.resolve(x.auth.currentUser.uid);
+    return new Promise(function(res){ var off=x.m.onAuthStateChanged(x.auth,function(cu){ try{off();}catch(_e){} res(cu?cu.uid:null); }); });
   }
 
   function closeMenu(){ var d=slot.querySelector('.an-drop'); var btn=slot.querySelector('.an-btn'); if(d)d.classList.remove('open'); if(btn)btn.setAttribute('aria-expanded','false'); }
@@ -116,22 +136,30 @@
 
   function onLogin(e){
     e.preventDefault();
-    loadAuth().then(function(x){
+    loadFB().then(function(x){
       return x.m.signInWithPopup(x.auth, new x.m.GoogleAuthProvider()).then(function(res){
-        var nm=(res.user && res.user.displayName)||'Hesabım';
-        setU({name:nm}); render();
+        var uid=res.user && res.user.uid;
+        var gname=(res.user && res.user.displayName)||'Hesabım';
+        setU({name:gname, uid:uid}); render();          // Google adını hemen göster
+        // Sunucuda kayıtlı özel ad varsa (önceden düzenlenmiş) onu getirip göster.
+        return fetchServerName(x, uid).then(function(sname){
+          if(sname){
+            var uu=getU()||{}; uu.name=sname; uu.uid=uid; setU(uu);
+            try{ localStorage.setItem('kriterin_nick',sname); localStorage.setItem('kriterin_nick_custom','1'); }catch(_e){}
+            render();
+          }
+        });
       });
     }).catch(function(err){ if(err && err.code!=='auth/popup-closed-by-user') alert('Giriş yapılamadı: '+(err&&err.message?err.message:err)); });
   }
   function onLogout(e){
     e.preventDefault();
     setU(null); render();
-    loadAuth().then(function(x){ return x.m.signOut(x.auth); }).catch(function(){});
+    loadFB().then(function(x){ return x.m.signOut(x.auth); }).catch(function(){});
   }
 
-  // Liderlik + bardaki gorunen adi degistirir. Sunucuya yazma yalnizca KB'nin
-  // yuklu oldugu sayfada (gunun-sorusu) olur; diger sayfalarda "custom" bayragi
-  // sayesinde ad, oyun sayfasi bir sonraki senkronda sunucuya tasir.
+  // Bardaki + liderlikteki adı değiştirir ve players/{uid}.name'e YAZAR; böylece
+  // aynı hesapla tekrar girişte (her cihazda) bu ad korunur, istenince güncellenir.
   function onSaveName(e){
     if(e){ e.preventDefault(); e.stopPropagation(); }
     var inp=slot.querySelector('.an-input'); if(!inp) return;
@@ -139,9 +167,13 @@
     if(!n){ alert('Bu isim kullanılamaz, başka bir isim dene.'); inp.focus(); return; }
     var u=getU()||{}; u.name=n; setU(u);
     try{ localStorage.setItem('kriterin_nick', n); localStorage.setItem('kriterin_nick_custom','1'); }catch(_e){}
-    if(window.KB && KB.setName){ try{ KB.setName(n); }catch(_e){} }
-    var hn=document.getElementById('hiNick'); if(hn) hn.textContent=n;   // oyun sayfasindaysa selamlama da guncellensin
-    render();
+    var hn=document.getElementById('hiNick'); if(hn) hn.textContent=n;   // oyun sayfasındaysa selamlama da güncellensin
+    render();                                                            // anında geri bildirim
+    // Sunucuya kalıcı yaz (arka planda). Oyun sayfasında KB de aynı alanı günceller.
+    loadFB().then(function(x){ return resolveUid(x).then(function(uid){
+      if(uid){ if(!u.uid){ u.uid=uid; setU(u); } return saveServerName(x, uid, n); }
+    }); }).catch(function(){});
+    try{ window.dispatchEvent(new CustomEvent('kriterin-auth')); }catch(_e){}
   }
 
   // Başka sekmede (storage) ya da aynı sayfada (anket/günün sorusu girişi) değişince güncelle

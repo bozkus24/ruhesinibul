@@ -24,7 +24,7 @@ gtag("consent","default",{ad_storage:c,ad_user_data:c,ad_personalization:c,analy
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#e0405f">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Kriterin","alternateName":"Kriterin, kriter hesaplayıcı","url":"https://kriterin.com/","inLanguage":"tr-TR","description":"Aradığın kriterlere Türkiye'de kaç kişi uyuyor? Hesapla, Günün Sorusu'nda tahmin et, kendi kriterlerinden anketini oluştur.","image":"https://kriterin.com/og-v2.png","publisher":{"@type":"Organization","name":"Kriterin","url":"https://kriterin.com/","email":"kriterincom@gmail.com","logo":{"@type":"ImageObject","url":"https://kriterin.com/favicon-192.png"}},"hasPart":[{"@type":"WebPage","name":"Hesaplayıcı","url":"https://kriterin.com/hesaplayici.html"},{"@type":"WebPage","name":"Günün Sorusu","url":"https://kriterin.com/gunun-sorusu.html"},{"@type":"WebPage","name":"Flörtünü Test Et","url":"https://kriterin.com/anket.html"},{"@type":"CollectionPage","name":"Yazılar","url":"https://kriterin.com/yazilar.html"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Kriterin","alternateName":"Kriterin, kriter hesaplayıcı","url":"https://kriterin.com/","inLanguage":"tr-TR","description":"Aradığın kriterlere Türkiye'de kaç kişi uyuyor? Hesapla, Günün Sorusu'nda tahmin et, kendi kriterlerinden anketini oluştur.","image":"https://kriterin.com/og-v2.png","publisher":{"@type":"Organization","name":"Kriterin","url":"https://kriterin.com/","email":"kriterincom@gmail.com","logo":{"@type":"ImageObject","url":"https://kriterin.com/favicon-192.png"}},"hasPart":[{"@type":"WebPage","name":"Hesaplayıcı","url":"https://kriterin.com/hesaplayici.html"},{"@type":"WebPage","name":"Günün Sorusu","url":"https://kriterin.com/gunun-sorusu"},{"@type":"WebPage","name":"Flörtünü Test Et","url":"https://kriterin.com/anket.html"},{"@type":"CollectionPage","name":"Yazılar","url":"https://kriterin.com/yazilar.html"}]}</script>
 <script>(function(){try{var t=localStorage.getItem("kriterin_tema");if(!t)t=matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>
 <style>
 :root{--bg:#f6f3f1;--surface:#fff;--surface-2:#faf7f6;--ink:#231a20;--muted:#6e666c;--line:#e8e0e1;--accent:#e0405f;--accent-soft:#fbe6ea;--data:#1f9c92;--data-soft:#e2f2f0;--shadow:0 1px 2px rgba(35,26,32,.05),0 12px 30px -18px rgba(35,26,32,.28);--font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
@@ -84,7 +84,7 @@ footer a:hover{color:var(--accent)}
       <span class="d-tx"><span class="d-t">Hesaplayıcı</span><span class="d-d">Aradığın kriterlere Türkiye'de kaç kişi uyuyor?</span></span>
       <span class="d-ar">&rarr;</span>
     </a>
-    <a class="door d2" href="/gunun-sorusu.html">
+    <a class="door d2" href="/gunun-sorusu">
       <span class="d-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="13.5" r="7.5"/><circle cx="10.5" cy="13.5" r="4"/><circle cx="10.5" cy="13.5" r="1"/><path d="M10.5 13.5L21 3"/><path d="M21 3l-3.4.5M21 3l-.5 3.4"/></svg></span>
       <span class="d-tx"><span class="d-t" id="dtLabel">Günün Sorusu <span class="badge">Yeni</span></span><span class="d-d" id="dtRight">Her gün yeni bir tahmin yarışı</span></span>
       <span class="d-ar">&rarr;</span>
@@ -118,7 +118,7 @@ document.getElementById("themeBtn").addEventListener("click",function(){
 (function(){try{var s=JSON.parse(localStorage.getItem('kriterin_gunun_soru')||'{}');var k=(function(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();})(new Date());if(s.date===k&&s.done){var rt=document.getElementById('dtRight');if(rt){var up=function(){var n=new Date(),mid=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1,0,0,0,0),x=Math.floor((mid-n)/1000);if(x<=0){location.reload();return;}var h=Math.floor(x/3600),m=Math.floor(x%3600/60),ss=x%60,z=function(v){return(v<10?'0':'')+v;};rt.textContent='Sonraki soru: '+z(h)+':'+z(m)+':'+z(ss);};up();setInterval(up,1000);}}}catch(e){}})();
 if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});}
 </script>
-<script src="/authnav.js?v=3" defer></script>
+<script src="/authnav.js?v=4" defer></script>
 <script src="/cerez.js" defer></script>
 </body>
 </html>
