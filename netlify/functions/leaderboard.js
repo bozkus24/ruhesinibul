@@ -55,6 +55,9 @@ async function runQuery(token, structuredQuery){
   });
   const arr = await res.json();
   if(!Array.isArray(arr)) throw new Error('sorgu hatasi: ' + JSON.stringify(arr));
+  // Firestore hatayı dizi İÇİNDE de döndürebilir: [{"error":{code,message}}].
+  // Bunu "boş sonuç" sanma (2 gün görünmez kalan 403 böyle maskelendi) — fırlat.
+  if(arr.length && arr[0] && arr[0].error) throw new Error('firestore ' + (arr[0].error.code||'') + ': ' + (arr[0].error.message||JSON.stringify(arr[0].error)));
   return arr.filter(x => x.document).map(x => x.document);
 }
 
@@ -78,7 +81,7 @@ function mapRow(d){
   };
 }
 
-exports.handler = async (event) => {
+exports.handler = async () => {
   try{
     const token = await getAccessToken();
     const streakQ = {
@@ -92,22 +95,10 @@ exports.handler = async (event) => {
       orderBy:[{ field:{ fieldPath:'avgTries' }, direction:'ASCENDING' }],
       limit:100
     };
-
-    // GEÇİCİ TEŞHİS: /api/leaderboard?debug=1 — hangi projeye bağlanıyor + Firestore
-    // ham cevabı (hata mı, boş mu?). Gizli anahtar döndürülmez.
-    if(event && event.queryStringParameters && event.queryStringParameters.debug === '1'){
-      let saProject=''; try{ saProject=getServiceAccount().project_id; }catch(e){}
-      const r = await fetch('https://firestore.googleapis.com/v1/projects/kriterin/databases/(default)/documents:runQuery',
-        { method:'POST', headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
-          body: JSON.stringify({ structuredQuery: streakQ }) });
-      const raw = await r.text();
-      return { statusCode:200, headers:{ 'Content-Type':'application/json', 'Cache-Control':'no-store' },
-        body: JSON.stringify({ debug:true, saProject, httpStatus:r.status, rawSample: raw.slice(0,1200) }) };
-    }
-
     // Her sorgu bağımsız: biri hata verse (ör. bileşik index hâlâ "building")
     // boş döner, diğeri yine gelir — tek sorgu tüm liderliği 503 yapmasın.
-    const safe = (q) => runQuery(token, q).catch(() => []);
+    // Hata sessizce yutulmasın: Netlify fonksiyon loglarına yaz (izlenebilir kalsın).
+    const safe = (q) => runQuery(token, q).catch((e) => { try{ console.error('[leaderboard] sorgu hatasi:', (e && e.message) || e); }catch(_){} return []; });
     const [streakDocs, triesDocs] = await Promise.all([ safe(streakQ), safe(triesQ) ]);
     const streak = streakDocs.map(mapRow);
     const tries = triesDocs.map(mapRow).sort((a,b) => {
