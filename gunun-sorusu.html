@@ -662,7 +662,7 @@ input[type=text]:focus{border-color:var(--accent)}
   window.addEventListener('kb-ready', loadBoards);
   window.addEventListener('kb-synced', loadBoards);  // oyun IIFE senkron edince tabloyu yenile
 
-  $('loginBtn').addEventListener('click', function(){ if(window.KB&&KB.signIn) KB.signIn(); else alert('Giriş yalnızca canlı sitede çalışır.'); });
+  $('loginBtn').addEventListener('click', function(){ if(window.KR&&window.KR.inApp){window.KR.browserNotice();return;} if(window.KB&&KB.signIn) KB.signIn(); else alert('Giriş yalnızca canlı sitede çalışır.'); });
   $('logoutBtn').addEventListener('click', function(){ if(window.KB&&KB.signOut) KB.signOut(); });
 
   // İsteğe bağlı: Google adını beğenmeyen liderlik tablosu ismini düzenleyebilir
@@ -813,7 +813,7 @@ input[type=text]:focus{border-color:var(--accent)}
     <a href="mailto:kriterincom@gmail.com" style="color:var(--muted);text-decoration:none">İletişim</a>
   </div>
 </footer>
-<script src="/authnav.js?v=5" defer></script>
+<script src="/authnav.js?v=6" defer></script>
 <script src="/cerez.js" data-ads defer></script>
 </body>
 </html>
