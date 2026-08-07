@@ -11,13 +11,13 @@ gtag("consent","default",{ad_storage:c,ad_user_data:c,ad_personalization:c,analy
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="description" content="Kriterin Günün Sorusu: her gün istatistiki bir tahmin sorusu. 5 hakkın var; yüksek/alçak ve sıcaklık ipuçlarıyla doğru sayıyı bul." />
 <title>Günün Sorusu · Kriterin</title>
-<link rel="canonical" href="https://kriterin.com/gunun-sorusu.html" />
+<link rel="canonical" href="https://kriterin.com/gunun-sorusu" />
 <meta name="theme-color" content="#e0405f" />
 <script>try{var t=localStorage.getItem('kriterin_tema');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Kriterin" />
 <meta property="og:locale" content="tr_TR" />
-<meta property="og:url" content="https://kriterin.com/gunun-sorusu.html" />
+<meta property="og:url" content="https://kriterin.com/gunun-sorusu" />
 <meta property="og:title" content="Günün Sorusu · Kriterin" />
 <meta property="og:description" content="Her gün istatistiki bir tahmin sorusu, 5 hakla doğru sayıyı bul." />
 <meta property="og:image" content="https://kriterin.com/og-v2.png" />
@@ -172,7 +172,6 @@ input[type=text]:focus{border-color:var(--accent)}
         <div class="inrow">
           <button class="btn" id="shareBtn" style="width:100%">Sonucu paylaş</button>
         </div>
-        <p class="foot">Yarın yeni bir soru olacak, serini bozma!</p>
         <div class="foot" id="nextIn" style="font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;margin-top:2px"></div>
       </div>
     </div>
@@ -333,7 +332,16 @@ input[type=text]:focus{border-color:var(--accent)}
     var k=gunKaydi();
     if(!k) return false;
     state.date=todayKey; state.done=true; state.solved=!!k.solved;
-    state.guesses=new Array(Math.max(1,Math.min(MAX,k.tries||MAX))).fill(null);
+    if(k.guesses && k.guesses.length){
+      state.guesses=k.guesses.slice(0,MAX);   // gerçek tahmin değerleri kayıtlı: birebir göster
+    } else {
+      // Eski kayıtlarda tek tek tahmin değerleri yok, yalnızca sayısı biliniyor.
+      // Bilinmeyen tahminler renderGame'de "—" gösterilir; çözülen günde SON tahmin
+      // doğru cevaptır, onu gerçek değeriyle koy (tek tahminde bilene doğru gösterir).
+      var arr=new Array(Math.max(1,Math.min(MAX,k.tries||MAX))).fill(null);
+      if(k.solved) arr[arr.length-1]=today.a;
+      state.guesses=arr;
+    }
     state.solveMs=k.ms||0;
     set(LS.game, JSON.stringify(state));
     return true;
@@ -381,6 +389,10 @@ input[type=text]:focus{border-color:var(--accent)}
   function renderGame(){
     var gl=document.getElementById('guessList'), html='';
     state.guesses.forEach(function(g,i){
+      if(g==null){   // değeri bilinmeyen tahmin (eski kayıttan kilitlendi): sahte "0 %" gösterme
+        html+='<div class="grow"><span class="gn">'+(i+1)+'</span><span class="gval" style="opacity:.55">—</span></div>';
+        return;
+      }
       var fb=feedback(g);
       html+='<div class="grow"><span class="gn">'+(i+1)+'</span><span class="gval">'+fmt(g)+' '+today.u+'</span>'
         +'<span class="gdir">'+fb.dir+'</span><span class="gvibe" style="color:'+fb.c+'">'+fb.icon+fb.label+'</span></div>';
@@ -475,7 +487,7 @@ input[type=text]:focus{border-color:var(--accent)}
     if(guess===today.a){ state.solved=true; state.done=true; state.solveMs=Math.max(0,Date.now()-(state.startedAt||Date.now())); }
     else if(state.guesses.length>=MAX){ state.done=true; }
     set(LS.game, JSON.stringify(state));
-    if(state.done){ var kayit={solved:state.solved,tries:state.guesses.length,ms:state.solveMs||0};
+    if(state.done){ var kayit={solved:state.solved,tries:state.guesses.length,ms:state.solveMs||0,guesses:state.guesses.slice()};
       var hh=loadHistory(); hh[todayKey]=kayit; saveHistory(hh); cihazGunuYaz(kayit); try{window.dispatchEvent(new CustomEvent('kb-done'))}catch(e){} syncServer(); }
     document.getElementById('guessInput').value='';
     renderGame(); renderStats();
@@ -484,8 +496,8 @@ input[type=text]:focus{border-color:var(--accent)}
 
   function shareText(){
     return state.solved
-      ? "Kriterin Günün Sorusu'nu "+state.guesses.length+". tahminde bildim! Sen kaçta bilirsin?\nkriterin.com/gunun-sorusu.html"
-      : "Kriterin Günün Sorusu'nu bugün bilemedim, sen dener misin?\nkriterin.com/gunun-sorusu.html";
+      ? "Kriterin Günün Sorusu'nu "+state.guesses.length+". tahminde bildim! Sen kaçta bilebilirsin?\nkriterin.com"
+      : "Kriterin Günün Sorusu'nu bugün bilemedim, sen dener misin?\nkriterin.com";
   }
   document.getElementById('shareBtn').addEventListener('click',function(){
     if(navigator.share){navigator.share({text:shareText()}).catch(function(){});}
@@ -537,6 +549,12 @@ input[type=text]:focus{border-color:var(--accent)}
         nick=sunucu; set(LS.nick,sunucu);
         var hn=document.getElementById('hiNick'); if(hn)hn.textContent=sunucu;
       }
+      // Üst bardaki (authnav) ad da liderlik/özel adla aynı olsun: girişten sonra
+      // Google adı değil, kayıtlı ad görünsün ve her cihazda tutarlı kalsın.
+      try{ var uu=JSON.parse(get('kriterin_user')||'null')||{};
+        if(uu.name!==name){ uu.name=name; if(gUser&&gUser.uid)uu.uid=gUser.uid;
+          localStorage.setItem('kriterin_user',JSON.stringify(uu));
+          window.dispatchEvent(new CustomEvent('kriterin-auth')); } }catch(_e){}
       var payload={ name:name, history:merged, streak:st.streak, bestStreak:st.bestStreak,
         totalDays:st.totalDays, solvedCount:st.solvedCount, totalTries:st.totalTries,
         solveMsSum:st.solveMsSum, lastDate:st.lastDate, eligible:st.eligible };
@@ -757,7 +775,9 @@ input[type=text]:focus{border-color:var(--accent)}
     const keyOffset = (todayKey, off) => { const p=todayKey.split('-'); const d=new Date(+p[0],+p[1]-1,+p[2]); d.setDate(d.getDate()+off); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); };
     onAuthStateChanged(auth, (u) => {
       cur = u;
-      try{ if(u)localStorage.setItem('kriterin_user',JSON.stringify({name:u.displayName||'Hesabım'})); else localStorage.removeItem('kriterin_user'); window.dispatchEvent(new Event('kriterin-auth')); }catch(e){}
+      try{ if(u){ var cn=''; try{ if(localStorage.getItem('kriterin_nick_custom')) cn=(localStorage.getItem('kriterin_nick')||'').trim(); }catch(_e){}
+        localStorage.setItem('kriterin_user',JSON.stringify({name: cn||u.displayName||'Hesabım', uid:u.uid})); }
+        else localStorage.removeItem('kriterin_user'); window.dispatchEvent(new Event('kriterin-auth')); }catch(e){}
       window.dispatchEvent(new CustomEvent('kb-auth', { detail: u ? { uid:u.uid, name:u.displayName, email:u.email } : null }));
     });
     window.KB = {
@@ -797,7 +817,7 @@ input[type=text]:focus{border-color:var(--accent)}
     <a href="mailto:kriterincom@gmail.com" style="color:var(--muted);text-decoration:none">İletişim</a>
   </div>
 </footer>
-<script src="/authnav.js?v=3" defer></script>
+<script src="/authnav.js?v=4" defer></script>
 <script src="/cerez.js" data-ads defer></script>
 </body>
 </html>

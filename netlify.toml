@@ -22,6 +22,20 @@
   to = "/.netlify/functions/leaderboard"
   status = 200
 
+# Günün Sorusu temiz URL: /gunun-sorusu sayfayı sunar (adres çubuğunda .html yok);
+# eski /gunun-sorusu.html ise tek kanonik adrese kalıcı (301) yönlenir. Rewrite
+# hedefi (200) yeniden yönlendirme motorundan geçmediği için döngü oluşmaz.
+[[redirects]]
+  from = "/gunun-sorusu.html"
+  to = "/gunun-sorusu"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/gunun-sorusu"
+  to = "/gunun-sorusu.html"
+  status = 200
+
 # site/ klasörü yalnızca arşiv kaynak (makale üreteçleri) — yayında servis edilmesin.
 # force = true şart: dosyalar publish dizininde gerçekten var, onsuz statik
 # dosya kuralı geçer ve kaynak yine sunulur.
