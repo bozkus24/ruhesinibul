@@ -43,10 +43,11 @@ service cloud.firestore {
       // Gizli anahtar artık YOK; hassas veri (cevaplar) responses altında kilitli.
       allow read: if true;
 
-      // Oluşturma: alan/tip doğrulama; owner ya boş ya kendi uid'i.
-      // (Girişsiz oluşturma mümkün ama sonuçları görmek için sonradan giriş şart;
-      //  spam engeli App Check katmanındadır.)
-      allow create: if request.resource.data.name is string
+      // Oluşturma: kimlik ZORUNLU (anonim de olsa) — kimliksiz curl/script yazımı
+      // kapatıldı. owner ya boş (anonim kurucu; sonradan Google ile sahiplenir)
+      // ya da kendi uid'i. App Check ikinci katman.
+      allow create: if request.auth != null
+        && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 40
         && request.resource.data.ownerName is string
@@ -54,8 +55,7 @@ service cloud.firestore {
         && request.resource.data.criteria is list
         && request.resource.data.criteria.size() <= 30
         && (request.resource.data.owner == ''
-            || (request.auth != null
-                && request.resource.data.owner == request.auth.uid));
+            || request.resource.data.owner == request.auth.uid);
 
       // Güncelleme SADECE iki senaryoda:
       allow update: if
@@ -79,13 +79,16 @@ service cloud.firestore {
         // Cevapları SADECE anketi oluşturan (owner) okuyabilir.
         allow read: if request.auth != null
           && get(/databases/$(database)/documents/surveys/$(surveyId)).data.owner == request.auth.uid;
-        // Katılımcı cevap yazabilir (giriş şart değil; App Check + alan doğrulama korur).
-        allow create: if request.resource.data.name is string
+        // Katılımcı cevap yazar. Kimlik ZORUNLU (anonim giriş yeterli): kimliksiz
+        // toplu spam yazımı kapatıldı. App Check + alan doğrulama ikinci katman.
+        allow create: if request.auth != null
+          && request.resource.data.name is string
           && request.resource.data.name.size() <= 40
           && request.resource.data.score is number
           && request.resource.data.score >= 0
           && request.resource.data.score <= 100
-          && request.resource.data.answers is map;
+          && request.resource.data.answers is map
+          && request.resource.data.answers.size() <= 30;
         // Cevap değiştirilemez / silinemez
         allow update, delete: if false;
       }
