@@ -199,7 +199,21 @@ const Store=(function(){
         am=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
         auth=am.getAuth(a);
         let first=true;
-        am.onAuthStateChanged(auth,u=>{ curUser=u?{uid:u.uid,name:u.displayName,email:u.email}:null; try{ if(u)localStorage.setItem('kriterin_user',JSON.stringify({name:u.displayName||'Hesabım'})); else localStorage.removeItem('kriterin_user'); window.dispatchEvent(new Event('kriterin-auth')); }catch(e){} if(first){first=false;authReadyRes();} userSubs.forEach(cb=>{try{cb(curUser)}catch(e){}}); },()=>{ if(first){first=false;authReadyRes();} });
+        am.onAuthStateChanged(auth,u=>{ curUser=u?{uid:u.uid,name:u.displayName,email:u.email}:null;
+          try{
+            if(u){
+              // Üst bar özel adı ezmesin: önce yereldeki özel ad (varsa), yoksa Google adı.
+              var cn=''; try{ if(localStorage.getItem('kriterin_nick_custom')) cn=(localStorage.getItem('kriterin_nick')||'').trim(); }catch(_e){}
+              localStorage.setItem('kriterin_user',JSON.stringify({name: cn||u.displayName||'Hesabım', uid:u.uid}));
+              window.dispatchEvent(new Event('kriterin-auth'));
+              // Sunucuda kayıtlı özel ad varsa (başka cihazda düzenlenmiş olabilir) onu getir.
+              try{ fs.getDoc(fs.doc(db,'players',u.uid)).then(function(s){ var d=s.exists()&&s.data(); var sn=d&&d.name?String(d.name).trim():'';
+                if(sn){ localStorage.setItem('kriterin_user',JSON.stringify({name:sn,uid:u.uid}));
+                  localStorage.setItem('kriterin_nick',sn); localStorage.setItem('kriterin_nick_custom','1');
+                  window.dispatchEvent(new Event('kriterin-auth')); } }).catch(function(){}); }catch(_e){}
+            } else { localStorage.removeItem('kriterin_user'); window.dispatchEvent(new Event('kriterin-auth')); }
+          }catch(e){}
+          if(first){first=false;authReadyRes();} userSubs.forEach(cb=>{try{cb(curUser)}catch(e){}}); },()=>{ if(first){first=false;authReadyRes();} });
         setTimeout(()=>authReadyRes(),3000);
       }catch(e){ authReadyRes(); }
     }catch(e){ ready=false; authReadyRes(); } // offline/önizleme → localStorage
@@ -772,7 +786,7 @@ async function renderRespond(id){
   app.appendChild(h(`<div class="top">
     <div class="eyebrow">Anket</div>
     <h1>${esc(survey.name)}</h1>
-    <p class="lede"><b>${esc(creator||survey.name)}</b> kendi kriterlerini belirledi. Kendi özelliklerini gir, uyumunu ve liderlik tablosunu gör.</p>
+    <p class="lede"><b>${esc(creator||survey.name)}</b> kendi kriterlerini belirledi. Kendi özelliklerini gir, ne kadar uyduğunu gör.</p>
   </div>`));
 
 
@@ -788,12 +802,12 @@ async function renderRespond(id){
   const gName=gUser&&gUser.name?kisaAdA(gUser.name):"";
   let nameCard=null;
   if(gName){
-    app.appendChild(h(`<div class="msg ok" style="margin:0 0 4px">Merhaba <b>${esc(gName)}</b>, liderlik tablosunda bu isimle görüneceksin.</div>`));
+    app.appendChild(h(`<div class="msg ok" style="margin:0 0 4px">Merhaba <b>${esc(gName)}</b>!</div>`));
   }else{
     nameCard=h(`<div class="card"><div class="field" style="margin:0">
       <label for="rname">Takma adın</label>
       <input class="inp" id="rname" maxlength="24" placeholder="Örn: Mehmet">
-      <p class="hint">Liderlik tablosunda bu isim görünecek.</p>
+      <p class="hint">Bu isimle katılacaksın.</p>
     </div></div>`);
     app.appendChild(nameCard);
   }
@@ -827,7 +841,7 @@ async function renderRespond(id){
     }catch(e){
       // Kayıt başarısız: sahte başarı gösterme, kullanıcı tekrar deneyebilsin
       submit.disabled=false; submit.textContent="Uyumumu hesapla";
-      err.textContent="Cevabın kaydedilemedi, liderlik tablosuna eklenemedin. İnternetini kontrol edip tekrar dene.";
+      err.textContent="Cevabın kaydedilemedi. İnternetini kontrol edip tekrar dene.";
       err.style.display="block"; err.scrollIntoView({behavior:"smooth",block:"center"});
       return;
     }

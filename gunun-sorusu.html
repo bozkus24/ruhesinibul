@@ -729,10 +729,19 @@ input[type=text]:focus{border-color:var(--accent)}
     if(unwatch){ try{unwatch()}catch(e){} unwatch=null; }
     activeType=curBoard;
     body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Yükleniyor…</p>';
+    // Hata mesajı: "En az tahmin" tablosu 10 günlük uygunluk gerektirir; yüklenemezse
+    // kuru bir "yüklenemedi" yerine kullanıcıya ne yapması gerektiğini söyle.
+    var errHtml=function(){
+      var msg = curBoard==='tries'
+        ? 'Liderlik tablosunda yer alman için en az 10 gün oynamalısın.'
+        : 'Liderlik tablosu yüklenemedi.';
+      note.textContent='';
+      return '<p class="qhint" style="text-align:center;padding:10px 0;margin:0">'+msg+'</p>';
+    };
     if(KB.watch){
-      unwatch=KB.watch(curBoard, renderBoard, function(){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yüklenemedi.</p>'; });
+      unwatch=KB.watch(curBoard, renderBoard, function(){ body.innerHTML=errHtml(); });
     } else {
-      KB.board(curBoard).then(renderBoard).catch(function(){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yüklenemedi.</p>'; });
+      KB.board(curBoard).then(renderBoard).catch(function(){ body.innerHTML=errHtml(); });
     }
   }
   function loadBoards(){
