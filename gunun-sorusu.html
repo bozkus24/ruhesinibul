@@ -245,15 +245,8 @@ input[type=text]:focus{border-color:var(--accent)}
   function set(k,v){try{localStorage.setItem(k,v)}catch(e){}}
   function fmt(n){return Number(n).toLocaleString('tr-TR')}
   function ymd(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()}
-  // Ad + soyad; ikisi birlikte 19 karakteri aşarsa yalnızca ad. Üçnokta yok.
-  function kisaAd(s){
-    var p=(s||'').trim().split(/\s+/).filter(Boolean);
-    if(!p.length) return '';
-    var ad=p[0];
-    if(p.length===1) return ad;
-    var ikili=ad+' '+p[p.length-1];
-    return ikili.length<=19 ? ikili : ad;
-  }
+  // Ad + soyad — ortak yardımcı (authnav.js -> window.KUtil).
+  function kisaAd(s){ return (window.KUtil&&window.KUtil.kisaAd)?window.KUtil.kisaAd(s):''; }
   // Takvim gununden gun numarasi. Date.UTC ile hesaplanir: girdi zaten yerel
   // takvim tarihi oldugu icin sonuc saat diliminden bagimsizdir. Gun numarasini
   // "simdi"nin UTC zaman damgasindan turetmek, UTC+3'te gece yarisi ile 03:00
@@ -629,19 +622,12 @@ input[type=text]:focus{border-color:var(--accent)}
   function $(id){return document.getElementById(id);}
   var LSg='kriterin_gunun_soru', LSn='kriterin_nick';
   function get(k){try{return localStorage.getItem(k)}catch(e){return null}}
-  var BAD=['orospu','piç','pic','yarrak','yarak','amk','pezevenk','kahpe','anani','anan','yavsak','oç','sik','got','siktir','amcik'];
-  function cleanName(s){ s=(s||'').trim().replace(/\s+/g,' ').slice(0,19); if(!s)return ''; var l=s.toLowerCase().replace(/[0-9@_.*ıİ]/g,''); for(var i=0;i<BAD.length;i++){ if(l.indexOf(BAD[i])>=0) return ''; } return s; }
+  // Ad temizliği — ortak yardımcı (authnav.js -> window.KUtil). Küfür listesi tek kaynak.
+  function cleanName(s){ return (window.KUtil&&window.KUtil.cleanName)?window.KUtil.cleanName(s):(s||'').trim().slice(0,19); }
   function esc(s){return (s+'').replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});}
   function ymd(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
-  // Ad + soyad; ikisi birlikte 19 karakteri aşarsa yalnızca ad. Üçnokta yok.
-  function kisaAd(s){
-    var p=(s||'').trim().split(/\s+/).filter(Boolean);
-    if(!p.length) return '';
-    var ad=p[0];
-    if(p.length===1) return ad;
-    var ikili=ad+' '+p[p.length-1];
-    return ikili.length<=19 ? ikili : ad;
-  }
+  // Ad + soyad — ortak yardımcı (authnav.js -> window.KUtil).
+  function kisaAd(s){ return (window.KUtil&&window.KUtil.kisaAd)?window.KUtil.kisaAd(s):''; }
   var todayKey=ymd(new Date());
   var user=null, curBoard='streak', myName='';
 
@@ -813,7 +799,7 @@ input[type=text]:focus{border-color:var(--accent)}
     <a href="mailto:kriterincom@gmail.com" style="color:var(--muted);text-decoration:none">İletişim</a>
   </div>
 </footer>
-<script src="/authnav.js?v=6" defer></script>
+<script src="/authnav.js?v=7" defer></script>
 <script src="/cerez.js" data-ads defer></script>
 </body>
 </html>
