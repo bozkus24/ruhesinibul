@@ -708,13 +708,13 @@ input[type=text]:focus{border-color:var(--accent)}
   function fetchStatic(force){
     return fetch('/api/leaderboard', force?{cache:'reload'}:{})
       .then(function(r){ if(!r.ok) throw 0; return r.json(); })
-      // Bos dizi truthy oldugu icin eskiden burada throw atilmiyordu: sunucu bos
-      // ozet donerse tablo kalici olarak statik moda kilitlenip "Henuz kimse yok"
-      // gosteriyor, canli Firestore yoluna hic dusmuyordu. Uzunluga bakiyoruz.
+      // Doğrudan-okuma yedeği kaldırıldı: fonksiyon TEK kaynak. Bu yüzden BOŞ yanıt
+      // artık "hata" değil, geçerli "henüz kimse sıralamada yok" durumudur; boşta
+      // throw edersek yedek mesajına ("yüklenemedi") düşer, oysa doğrusu "Henüz
+      // kimse yok". Yalnızca geçersiz yanıtta (JSON değil) hata say.
       .then(function(j){
-        var st=(j&&j.streak)||[], tr=(j&&j.tries)||[];
-        if(!j||(!st.length&&!tr.length)) throw 0;
-        staticData={streak:st,tries:tr}; staticAt=Date.now();
+        if(!j || typeof j!=='object') throw 0;
+        staticData={streak:(j.streak)||[],tries:(j.tries)||[]}; staticAt=Date.now();
       });
   }
   function maybeRefreshStatic(force){
