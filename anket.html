@@ -199,9 +199,11 @@ const Store=(function(){
         am=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
         auth=am.getAuth(a);
         let first=true;
-        am.onAuthStateChanged(auth,u=>{ curUser=u?{uid:u.uid,name:u.displayName,email:u.email}:null;
+        am.onAuthStateChanged(auth,u=>{ curUser=u?{uid:u.uid,name:u.displayName,email:u.email,anon:!!u.isAnonymous}:null;
           try{
-            if(u){
+            // Yalnızca GERÇEK (Google) kullanıcı bara/isme yansır. Anonim kimlik
+            // yalnızca cevap yazmak içindir; "giriş yapmış" sayılmaz.
+            if(u && !u.isAnonymous){
               // Üst bar özel adı ezmesin: önce yereldeki özel ad (varsa), yoksa Google adı.
               var cn=''; try{ if(localStorage.getItem('kriterin_nick_custom')) cn=(localStorage.getItem('kriterin_nick')||'').trim(); }catch(_e){}
               localStorage.setItem('kriterin_user',JSON.stringify({name: cn||u.displayName||'Hesabım', uid:u.uid}));
@@ -211,9 +213,11 @@ const Store=(function(){
                 if(sn){ localStorage.setItem('kriterin_user',JSON.stringify({name:sn,uid:u.uid}));
                   localStorage.setItem('kriterin_nick',sn); localStorage.setItem('kriterin_nick_custom','1');
                   window.dispatchEvent(new Event('kriterin-auth')); } }).catch(function(){}); }catch(_e){}
-            } else { localStorage.removeItem('kriterin_user'); window.dispatchEvent(new Event('kriterin-auth')); }
+            } else if(!u){ localStorage.removeItem('kriterin_user'); window.dispatchEvent(new Event('kriterin-auth')); }
           }catch(e){}
-          if(first){first=false;authReadyRes();} userSubs.forEach(cb=>{try{cb(curUser)}catch(e){}}); },()=>{ if(first){first=false;authReadyRes();} });
+          if(first){first=false;authReadyRes();}
+          var pu=(curUser&&!curUser.anon)?curUser:null;   // abonelere anonim'i "giriş" gibi verme
+          userSubs.forEach(cb=>{try{cb(pu)}catch(e){}}); },()=>{ if(first){first=false;authReadyRes();} });
         setTimeout(()=>authReadyRes(),3000);
       }catch(e){ authReadyRes(); }
     }catch(e){ ready=false; authReadyRes(); } // offline/önizleme → localStorage
@@ -223,11 +227,27 @@ const Store=(function(){
   function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||"null")}catch(e){return null}}
   function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
   function rid(){return Math.random().toString(36).slice(2,9)}
+  // Yazma için kimlik garanti et: Google girişi yoksa ANONİM giriş yap. Anonim
+  // kimlik yalnızca "cevap yazabilmek" içindir (kural artık auth!=null istiyor);
+  // sahip/kurucu sayılmaz, bara yansımaz. Google girişliyse dokunmaz.
+  async function ensureAuth(){
+    await initP;
+    if(!ready || !am || !auth) return null;   // çevrimdışı/önizleme: loc_ yolu, kimlik yok
+    try{ await authReady; }catch(e){}
+    if(curUser) return curUser;               // zaten Google ya da anonim var
+    try{ var cred=await am.signInAnonymously(auth);
+      if(!curUser && cred && cred.user) curUser={uid:cred.user.uid,name:null,email:null,anon:true};
+    }catch(e){ return null; }
+    return curUser;
+  }
   return {
-    async getUser(){ await initP; await authReady; return curUser; },
+    // Anonim kullanıcı "giriş yapmış" sayılmaz: getUser/onUser onu null döndürür,
+    // böylece tüm mevcut "giriş var mı" kontrolleri (oluşturma kapısı, sonuçlar
+    // sayfası vb.) olduğu gibi çalışır — yalnızca Google kullanıcısı gerçek kimliktir.
+    async getUser(){ await initP; await authReady; return (curUser&&!curUser.anon)?curUser:null; },
     async online(){ await initP; return ready; },
     canAuth(){ return !!(am&&auth); },
-    onUser(cb){ userSubs.push(cb); initP.then(()=>authReady).then(()=>cb(curUser)); },
+    onUser(cb){ userSubs.push(cb); initP.then(()=>authReady).then(()=>cb((curUser&&!curUser.anon)?curUser:null)); },
     async signIn(){ await initP; if(!am||!auth)throw new Error("auth yok"); return am.signInWithPopup(auth,new am.GoogleAuthProvider()); },
     async signOut(){ await initP; if(am&&auth)return am.signOut(auth); },
     async createSurvey(data){
@@ -269,6 +289,7 @@ const Store=(function(){
     async addResponse(id,resp){
       await initP;
       if(ready&&!id.startsWith("loc_")){
+        await ensureAuth();   // anonim de olsa kimlik garanti — kural artık auth!=null istiyor
         const {collection,addDoc}=fs;
         await addDoc(collection(db,"surveys",id,"responses"),{...resp,createdAt:Date.now()});
         return;
@@ -291,7 +312,7 @@ const Store=(function(){
     // Girişte: sahipsiz eski anketi (bu cihazdan bilinen) hesabına bağla
     async claimOwner(id){
       await initP; if(!ready||id.startsWith("loc_"))return false;
-      await authReady; if(!curUser)return false;
+      await authReady; if(!curUser||curUser.anon)return false;   // anonim sahiplenemez
       try{
         const {doc,getDoc,setDoc}=fs;
         const s=await getDoc(doc(db,"surveys",id));
@@ -306,7 +327,7 @@ const Store=(function(){
     // Hesaba bağlı tüm anketleri getir (cihazlar arası liste)
     async listMine(){
       await initP; if(!ready)return [];
-      await authReady; if(!curUser)return [];
+      await authReady; if(!curUser||curUser.anon)return [];   // anonim'in anketi olmaz
       try{
         const {collection,query,where,getDocs}=fs;
         const qs=await getDocs(query(collection(db,"surveys"),where("owner","==",curUser.uid)));

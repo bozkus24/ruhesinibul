@@ -81,13 +81,16 @@ function mapRow(d){
 exports.handler = async () => {
   try{
     const token = await getAccessToken();
+    // Her sorgu bağımsız: biri hata verse (ör. bileşik index hâlâ "building")
+    // boş döner, diğeri yine gelir — tek sorgu tüm liderliği 503 yapmasın.
+    const safe = (q) => runQuery(token, q).catch(() => []);
     const [streakDocs, triesDocs] = await Promise.all([
-      runQuery(token, {
+      safe({
         from:[{ collectionId:'players' }],
         orderBy:[{ field:{ fieldPath:'bestStreak' }, direction:'DESCENDING' }],
         limit:100
       }),
-      runQuery(token, {
+      safe({
         from:[{ collectionId:'players' }],
         where:{ fieldFilter:{ field:{ fieldPath:'eligible' }, op:'EQUAL', value:{ booleanValue:true } } },
         orderBy:[{ field:{ fieldPath:'avgTries' }, direction:'ASCENDING' }],
