@@ -797,20 +797,17 @@ async function renderRespond(id){
     return;
   }
 
-  // Google ile giriş yapmışsa (Günün Sorusu'ndan) takma ad sorulmaz, Google adı kullanılır
+  // Google ile girmiş olsa bile takma ad SEÇEBİLSİN; Google/özel ad yalnızca ön-dolgu.
   let gUser=null; try{ gUser=await Store.getUser(); }catch(e){}
   const gName=gUser&&gUser.name?kisaAdA(gUser.name):"";
-  let nameCard=null;
-  if(gName){
-    app.appendChild(h(`<div class="msg ok" style="margin:0 0 4px">Merhaba <b>${esc(gName)}</b>!</div>`));
-  }else{
-    nameCard=h(`<div class="card"><div class="field" style="margin:0">
-      <label for="rname">Takma adın</label>
-      <input class="inp" id="rname" maxlength="24" placeholder="Örn: Mehmet">
-      <p class="hint">Bu isimle katılacaksın.</p>
-    </div></div>`);
-    app.appendChild(nameCard);
-  }
+  let onDolgu=""; try{ if(localStorage.getItem('kriterin_nick_custom')) onDolgu=(localStorage.getItem('kriterin_nick')||'').trim(); }catch(e){}
+  if(!onDolgu) onDolgu=gName||"";
+  const nameCard=h(`<div class="card"><div class="field" style="margin:0">
+    <label for="rname">Takma adın</label>
+    <input class="inp" id="rname" maxlength="24" placeholder="Örn: Mehmet" value="${esc(onDolgu)}">
+    <p class="hint">Bu isimle katılacaksın. İstersen değiştir.</p>
+  </div></div>`);
+  app.appendChild(nameCard);
 
   const answers={};
   const form=h(`<div></div>`);
@@ -823,7 +820,7 @@ async function renderRespond(id){
 
   submit.addEventListener("click",async()=>{
     err.style.display="none";
-    const name=gName||(nameCard?nameCard.querySelector("#rname").value.trim():"");
+    const name=nameCard.querySelector("#rname").value.trim();
     for(const c of survey.criteria){
       if(answers[c.id]==null||answers[c.id]===""){
         err.textContent=`"${c.title}" için cevabını gir.`; err.style.display="block";
