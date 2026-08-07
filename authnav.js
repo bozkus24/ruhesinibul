@@ -45,21 +45,21 @@
   function setU(u){ try{ u?localStorage.setItem(KEY,JSON.stringify(u)):localStorage.removeItem(KEY); }catch(e){} }
   function esc(s){ return (s+'').replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
 
-  // Ad + soyad gostermeye calisir. Ikisi birlikte 19 karakteri asarsa yalnizca
-  // ad gosterilir. Ucnokta ile kisaltma yapilmaz.
-  var AD_SINIR = 19;
-  function kisaAd(s){
-    var p = (s||'').trim().split(/\s+/).filter(Boolean);
-    if(!p.length) return 'Hesabım';
-    var ad = p[0];
-    if(p.length === 1) return ad;
-    var ikili = ad + ' ' + p[p.length-1];
-    return ikili.length <= AD_SINIR ? ikili : ad;
-  }
+  // ===== Ortak yardımcılar — TEK KAYNAK (window.KUtil) =====
+  // Eskiden kisaAd/cleanName/BAD authnav + gunun-sorusu + anket'te ayrı ayrı
+  // kopyalıydı (küfür listesi drift riski). authnav her sayfada yüklendiğinden
+  // tek kaynak burası; diğer sayfalar window.KUtil üzerinden çağırır.
+  var KUtil = (window.KUtil = window.KUtil || {});
+  KUtil.BAD = ['orospu','piç','pic','yarrak','yarak','amk','pezevenk','kahpe','anani','anan','yavsak','oç','sik','got','siktir','amcik'];
+  // Ad temizliği: 19 karaktere kırp; boşsa ya da küfür içeriyorsa '' (geçersiz).
+  KUtil.cleanName = function(s){ s=(s||'').trim().replace(/\s+/g,' ').slice(0,19); if(!s)return ''; var l=s.toLowerCase().replace(/[0-9@_.*ıİ]/g,''); for(var i=0;i<KUtil.BAD.length;i++){ if(l.indexOf(KUtil.BAD[i])>=0) return ''; } return s; };
+  // Ad + soyad; ikisi 19 karakteri aşarsa yalnızca ad. Üçnokta yok. Boşta '' (saf).
+  KUtil.kisaAd = function(s){ var p=(s||'').trim().split(/\s+/).filter(Boolean); if(!p.length) return ''; var ad=p[0]; if(p.length===1) return ad; var ikili=ad+' '+p[p.length-1]; return ikili.length<=19 ? ikili : ad; };
 
-  // Ad temizligi: gunun-sorusu.html'deki filtreyle ayni. Bos donerse ad gecersiz.
-  var BAD=['orospu','piç','pic','yarrak','yarak','amk','pezevenk','kahpe','anani','anan','yavsak','oç','sik','got','siktir','amcik'];
-  function cleanName(s){ s=(s||'').trim().replace(/\s+/g,' ').slice(0,19); if(!s)return ''; var l=s.toLowerCase().replace(/[0-9@_.*ıİ]/g,''); for(var i=0;i<BAD.length;i++){ if(l.indexOf(BAD[i])>=0) return ''; } return s; }
+  var cleanName = KUtil.cleanName;
+  // authnav'ın kendi kullanımı: bara boş isim düşerse 'Hesabım' göster (saf
+  // kisaAd '' döner). Çağrı yerleri değişmesin diye burada sarmalanır.
+  function kisaAd(s){ return KUtil.kisaAd(s) || 'Hesabım'; }
   // Liderlik tablosunda kullanilan ad (gunun-sorusu ile ortak anahtar).
   function getNick(){ try{ return (localStorage.getItem('kriterin_nick')||'').trim(); }catch(e){ return ''; } }
 

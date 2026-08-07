@@ -360,14 +360,8 @@ function rangePoints(c,n){
   const drop=Math.ceil(dist/step);
   return Math.max(0,MAXPTS-drop);
 }
-function kisaAdA(s){
-  const p=(s||'').trim().split(/\s+/).filter(Boolean);
-  if(!p.length) return '';
-  const ad=p[0];
-  if(p.length===1) return ad;
-  const ikili=ad+' '+p[p.length-1];
-  return ikili.length<=19 ? ikili : ad;
-}
+// Ortak yardımcı (authnav.js -> window.KUtil).
+function kisaAdA(s){ return (window.KUtil&&window.KUtil.kisaAd)?window.KUtil.kisaAd(s):''; }
 function computeScore(survey,answers){
   let got=0,maxTotal=0; const brk=[];
   for(const c of survey.criteria){
@@ -1034,7 +1028,7 @@ async function renderResults(id){
   await load();
 }
 </script>
-<script src="/authnav.js?v=6" defer></script>
+<script src="/authnav.js?v=7" defer></script>
 <script src="/cerez.js" defer></script>
 </body>
 </html>

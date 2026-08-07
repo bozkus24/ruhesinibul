@@ -53,7 +53,7 @@ END = """<script>
 })();
 </script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}</script>
-<script src="/authnav.js?v=6" defer></script>
+<script src="/authnav.js?v=7" defer></script>
 <script src="/cerez.js" data-ads defer></script>"""
 
 
