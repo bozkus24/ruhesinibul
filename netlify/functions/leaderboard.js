@@ -78,25 +78,37 @@ function mapRow(d){
   };
 }
 
-exports.handler = async () => {
+exports.handler = async (event) => {
   try{
     const token = await getAccessToken();
+    const streakQ = {
+      from:[{ collectionId:'players' }],
+      orderBy:[{ field:{ fieldPath:'bestStreak' }, direction:'DESCENDING' }],
+      limit:100
+    };
+    const triesQ = {
+      from:[{ collectionId:'players' }],
+      where:{ fieldFilter:{ field:{ fieldPath:'eligible' }, op:'EQUAL', value:{ booleanValue:true } } },
+      orderBy:[{ field:{ fieldPath:'avgTries' }, direction:'ASCENDING' }],
+      limit:100
+    };
+
+    // GEÇİCİ TEŞHİS: /api/leaderboard?debug=1 — hangi projeye bağlanıyor + Firestore
+    // ham cevabı (hata mı, boş mu?). Gizli anahtar döndürülmez.
+    if(event && event.queryStringParameters && event.queryStringParameters.debug === '1'){
+      let saProject=''; try{ saProject=getServiceAccount().project_id; }catch(e){}
+      const r = await fetch('https://firestore.googleapis.com/v1/projects/kriterin/databases/(default)/documents:runQuery',
+        { method:'POST', headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+          body: JSON.stringify({ structuredQuery: streakQ }) });
+      const raw = await r.text();
+      return { statusCode:200, headers:{ 'Content-Type':'application/json', 'Cache-Control':'no-store' },
+        body: JSON.stringify({ debug:true, saProject, httpStatus:r.status, rawSample: raw.slice(0,1200) }) };
+    }
+
     // Her sorgu bağımsız: biri hata verse (ör. bileşik index hâlâ "building")
     // boş döner, diğeri yine gelir — tek sorgu tüm liderliği 503 yapmasın.
     const safe = (q) => runQuery(token, q).catch(() => []);
-    const [streakDocs, triesDocs] = await Promise.all([
-      safe({
-        from:[{ collectionId:'players' }],
-        orderBy:[{ field:{ fieldPath:'bestStreak' }, direction:'DESCENDING' }],
-        limit:100
-      }),
-      safe({
-        from:[{ collectionId:'players' }],
-        where:{ fieldFilter:{ field:{ fieldPath:'eligible' }, op:'EQUAL', value:{ booleanValue:true } } },
-        orderBy:[{ field:{ fieldPath:'avgTries' }, direction:'ASCENDING' }],
-        limit:100
-      })
-    ]);
+    const [streakDocs, triesDocs] = await Promise.all([ safe(streakQ), safe(triesQ) ]);
     const streak = streakDocs.map(mapRow);
     const tries = triesDocs.map(mapRow).sort((a,b) => {
       const t = (a.avgTries||0) - (b.avgTries||0);
