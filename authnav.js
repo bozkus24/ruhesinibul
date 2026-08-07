@@ -59,17 +59,23 @@
   }
 
   var cfg={apiKey:"AIzaSyD_MIekQmU9wOtam8vrckMyhgjHKD_ZR9o",authDomain:"kriterin.firebaseapp.com",projectId:"kriterin",storageBucket:"kriterin.firebasestorage.app",messagingSenderId:"46765593126",appId:"1:46765593126:web:25738b3ebc5f1168f0cce7"};
+  // App Check (reCAPTCHA v3) site anahtarı — gunun-sorusu/anket ile aynı.
+  var RECAPTCHA='6LdNungtAAAAAJ3h5_uGSEiUnyMGpk0Vns_DlOQn';
   var fbP=null;
   // Firebase yalnızca gerekince (giriş / isim kaydetme) yüklenir; sayfa açılışında değil.
-  // Auth + Firestore birlikte gelir: özel ad players/{uid}.name'de saklanır, böylece
-  // aynı hesapla (mail) başka cihaz/oturumda da kalıcı olur.
+  // Auth + Firestore + App Check birlikte gelir: özel ad players/{uid}.name'de saklanır.
   function loadFB(){
     if(fbP) return fbP;
     fbP=(async function(){
       var appMod=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+      var acMod=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js");
       var authMod=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
       var fsMod=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
       var app; try{ app=appMod.getApp(); }catch(e){ app=appMod.initializeApp(cfg); }
+      // App Check: bu sayfada henüz kurulmadıysa kur. Oyun/anket sayfaları App
+      // Check'i kendisi kurar; orada ikinci kez kurmak hata verir → yutulur.
+      // index/makale gibi yalnızca authnav olan sayfalarda jetonu üreten tek yer budur.
+      try{ acMod.initializeAppCheck(app, { provider:new acMod.ReCaptchaV3Provider(RECAPTCHA), isTokenAutoRefreshEnabled:true }); }catch(e){}
       return { m:authMod, auth:authMod.getAuth(app), fs:fsMod, db:fsMod.getFirestore(app) };
     })();
     return fbP;
