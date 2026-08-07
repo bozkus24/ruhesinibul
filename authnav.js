@@ -3,6 +3,40 @@
 // Giriş durumu localStorage'dan (kriterin_user) anında gösterilir; anket + günün
 // sorusu sayfaları gerçek Firebase durumundan bu anahtarı günceller, senkron kalır.
 (function(){
+  // ===== In-app tarayıcı (Instagram/TikTok/Facebook vb.) tespiti + yönlendirme =====
+  // Google OAuth, uygulama içi (embedded webview) tarayıcılarda TAMAMEN engellidir
+  // (disallowed_useragent); popup da redirect de çalışmaz. Bu ortamda giriş
+  // denemek yerine kullanıcıyı gerçek tarayıcıya (Chrome/Safari) yönlendiriyoruz.
+  // window.KR global: anket + günün sorusu giriş butonları da bunu kullanır.
+  var KR = (window.KR = window.KR || {});
+  try{ KR.inApp = /(FBAN|FBAV|FB_IAB|Instagram|Snapchat|TikTok|musical_ly|BytedanceWebview|Line\/|MicroMessenger)/i.test(navigator.userAgent||''); }
+  catch(e){ KR.inApp = false; }
+  KR.browserNotice = function(){
+    if(document.getElementById('kr-inapp')) return;
+    var ov = document.createElement('div');
+    ov.id = 'kr-inapp';
+    ov.innerHTML =
+      '<style>#kr-inapp{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.55)}'
+      +'#kr-inapp .krc{max-width:360px;width:100%;background:var(--surface,#fff);color:var(--ink,#231a20);border:1px solid var(--line,#e8e0e1);border-radius:16px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.3);font-size:15px;line-height:1.5}'
+      +'#kr-inapp h3{margin:0 0 8px;font-size:18px}#kr-inapp p{margin:0 0 14px;color:var(--muted,#6e666c)}#kr-inapp b{color:var(--ink,#231a20)}'
+      +'#kr-inapp .krb{display:flex;gap:8px}#kr-inapp button{flex:1;cursor:pointer;font:inherit;font-weight:700;padding:11px 14px;border-radius:10px;border:1px solid var(--line,#e8e0e1);background:var(--surface-2,#faf7f6);color:var(--ink,#231a20)}'
+      +'#kr-inapp button.krok{background:var(--accent,#e0405f);border-color:var(--accent,#e0405f);color:#fff}</style>'
+      +'<div class="krc" role="dialog" aria-label="Tarayıcıda aç">'
+      +'<h3>Girişi tarayıcıda yap</h3>'
+      +'<p>Instagram/TikTok gibi uygulama içi tarayıcıda Google girişi çalışmaz. '
+      +'Sağ üstteki <b>⋮</b> menüsüne (ya da paylaş simgesine) dokun → <b>“Tarayıcıda aç”</b> de. '
+      +'Chrome/Safari’de açılınca giriş yapabilirsin.</p>'
+      +'<div class="krb"><button type="button" data-kr-copy class="krok">Linki kopyala</button>'
+      +'<button type="button" data-kr-close>Kapat</button></div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){
+      if(e.target===ov || e.target.hasAttribute('data-kr-close')){ ov.remove(); return; }
+      if(e.target.hasAttribute('data-kr-copy')){
+        try{ if(navigator.clipboard) navigator.clipboard.writeText(location.href); e.target.textContent='Kopyalandı ✓'; }catch(_e){}
+      }
+    });
+  };
+
   var KEY='kriterin_user';
   var slot=document.getElementById('authNav');
   if(!slot) return;
@@ -142,6 +176,7 @@
 
   function onLogin(e){
     e.preventDefault();
+    if(KR.inApp){ KR.browserNotice(); return; }   // in-app webview: Google OAuth engelli, tarayıcıya yönlendir
     loadFB().then(function(x){
       return x.m.signInWithPopup(x.auth, new x.m.GoogleAuthProvider()).then(function(res){
         var uid=res.user && res.user.uid;
