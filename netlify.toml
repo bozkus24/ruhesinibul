@@ -53,6 +53,10 @@
     X-Frame-Options = "SAMEORIGIN"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+    # Konservatif CSP: script/style/connect kısıtlanmıyor (AdSense/GA/Firebase/
+    # reCAPTCHA çalışmaya devam etsin) ama eklenti/nesne (object) engelli,
+    # <base> enjeksiyonu (base-uri) ve clickjacking (frame-ancestors) kapalı.
+    Content-Security-Policy = "object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
 
 # Görseller (favicon, og.png vb.) uzun süre önbelleklensin — tekrar indirilmesin.
 # Değişirlerse yeni ad ver (ör. og-v2.png) ya da bu süreyi düşür.

@@ -1136,6 +1136,10 @@ footer a:hover {
     transition: none !important
   }
 }
+/* iOS Safari, 16px altı yazılabilir input'a odaklanınca otomatik zoom yapar
+   (sayfa zıplar). Yalnızca mobilde yazılabilir alanları 16px'e çıkar. Daha özgül
+   sayfa kurallarını ezmek için !important (mobil-özel erişilebilirlik override). */
+@media(max-width:480px){input.ni,input[type=number],input[type=text],input[type=email],input[type=tel],input[type=search],textarea{font-size:16px !important}}
 </style><script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7993571496408496" crossorigin="anonymous"></script>
 </head><body><nav class="sitenav"><div class="sitenav-in"><a class="nb" href="/"><img src="/favicon-96.png" alt="" width="26" height="26"><span class="wm">Kriterin</span></a> <span class="sp"></span> <span id="authNav"></span></div></nav><div class="wrap"><header class="top"><div class="brand"><span class="eyebrow">Türkiye · Tahmini kişi sayısı</span><h1>Aradığın kriterlere kaç kişi uyuyor?</h1><p class="lede">Aradığın özellikleri seç; Türkiye’nin resmî nüfus ve demografi verilerine dayanarak yaklaşık kaç yetişkinin bu kriterlere uyduğunu tahmin edelim.</p></div><button class="theme-btn" id="themeBtn" title="Temayı değiştir" aria-label="Temayı değiştir">◐</button></header><script>
 (function() {
