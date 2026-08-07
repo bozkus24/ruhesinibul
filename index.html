@@ -118,7 +118,7 @@ document.getElementById("themeBtn").addEventListener("click",function(){
 (function(){try{var s=JSON.parse(localStorage.getItem('kriterin_gunun_soru')||'{}');var k=(function(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();})(new Date());if(s.date===k&&s.done){var rt=document.getElementById('dtRight');if(rt){var up=function(){var n=new Date(),mid=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1,0,0,0,0),x=Math.floor((mid-n)/1000);if(x<=0){location.reload();return;}var h=Math.floor(x/3600),m=Math.floor(x%3600/60),ss=x%60,z=function(v){return(v<10?'0':'')+v;};rt.textContent='Sonraki soru: '+z(h)+':'+z(m)+':'+z(ss);};up();setInterval(up,1000);}}}catch(e){}})();
 if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});}
 </script>
-<script src="/authnav.js?v=4" defer></script>
+<script src="/authnav.js?v=5" defer></script>
 <script src="/cerez.js" defer></script>
 </body>
 </html>
