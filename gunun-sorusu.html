@@ -721,28 +721,15 @@ input[type=text]:focus{border-color:var(--accent)}
     if(!force && Date.now()-staticAt < 120000) return; // 2 dk'dan yeniyse dokunma
     fetchStatic(force).then(renderCurrent).catch(function(){});
   }
-  // Canlı yol (yedek): statik JSON yoksa/çalışmıyorsa Firestore'dan dinle.
+  // Yedek yol: statik özet (fonksiyon) yüklenemezse yalnızca mesaj göster.
+  // ESKİDEN burada Firestore'dan DOĞRUDAN players okunurdu; ama players okuması
+  // artık sahibiyle sınırlı (gizlilik + kota koruması) — bütün oyuncu geçmişinin
+  // dünyaya açılması kapatıldı. Liderlik tek kaynaktan gelir: servis hesaplı
+  // /api/leaderboard fonksiyonu. Fonksiyon geçici düşerse kullanıcı bunu görür.
   function liveLoad(){
     var body=$('lbBody'), note=$('lbNote');
-    if(!(window.KB&&(KB.watch||KB.board))){ body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu yalnızca canlı sitede çalışır. Giriş yapıp sıralamaya katılabilirsin.</p>'; note.textContent=''; return; }
-    if(unwatch && activeType===curBoard){ renderBoard(lastList); return; }
-    if(unwatch){ try{unwatch()}catch(e){} unwatch=null; }
-    activeType=curBoard;
-    body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Yükleniyor…</p>';
-    // Hata mesajı: "En az tahmin" tablosu 10 günlük uygunluk gerektirir; yüklenemezse
-    // kuru bir "yüklenemedi" yerine kullanıcıya ne yapması gerektiğini söyle.
-    var errHtml=function(){
-      var msg = curBoard==='tries'
-        ? 'Liderlik tablosunda yer alman için en az 10 gün oynamalısın.'
-        : 'Liderlik tablosu yüklenemedi.';
-      note.textContent='';
-      return '<p class="qhint" style="text-align:center;padding:10px 0;margin:0">'+msg+'</p>';
-    };
-    if(KB.watch){
-      unwatch=KB.watch(curBoard, renderBoard, function(){ body.innerHTML=errHtml(); });
-    } else {
-      KB.board(curBoard).then(renderBoard).catch(function(){ body.innerHTML=errHtml(); });
-    }
+    body.innerHTML='<p class="qhint" style="text-align:center;padding:10px 0;margin:0">Liderlik tablosu şu an yüklenemedi, birazdan tekrar dene.</p>';
+    if(note) note.textContent='';
   }
   function loadBoards(){
     if(boardMode==='static'){ renderCurrent(); maybeRefreshStatic(false); return; }
