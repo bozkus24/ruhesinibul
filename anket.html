@@ -291,14 +291,24 @@ const Store=(function(){
     async addResponse(id,resp){
       await initP;
       if(ready&&!id.startsWith("loc_")){
-        await ensureAuth();   // anonim de olsa kimlik garanti — kural artık auth!=null istiyor
-        const {collection,addDoc}=fs;
-        await addDoc(collection(db,"surveys",id,"responses"),{...resp,createdAt:Date.now()});
-        return;
+        const u=await ensureAuth();   // anonim de olsa kimlik garanti
+        if(!u) throw new Error("auth yok");
+        const {doc,getDoc,setDoc}=fs;
+        // Cevap doküman id'si = katılımcı uid'i → KİŞİ BAŞINA TEK CEVAP. Mükerrer
+        // katılımı engeller (aynı kimlik başka cihazdan/temizlenmiş tarayıcıdan
+        // tekrar katılamaz; kural responses update:false). Anonim kimlik tarayıcı
+        // başına olduğundan bu, Google girişli + aynı-tarayıcı durumlarını kapatır.
+        const ref=doc(db,"surveys",id,"responses",u.uid);
+        let prev=null;
+        try{ const s=await getDoc(ref); if(s.exists()) prev=s.data(); }catch(e){}  // self-read (kural izin verirse)
+        if(prev) return { already:true, score:prev.score, name:prev.name };        // zaten katılmış
+        await setDoc(ref,{...resp,uid:u.uid,createdAt:Date.now()});
+        return { already:false };
       }
-      const d=lsGet("kriterin_anket_"+id); if(!d)return;
+      const d=lsGet("kriterin_anket_"+id); if(!d)return { already:false };
       d.responses=d.responses||[]; d.responses.push({...resp,createdAt:Date.now()});
       lsSet("kriterin_anket_"+id,d);
+      return { already:false };
     },
     async getLeaderboard(id,max){
       await initP;
@@ -851,13 +861,24 @@ async function renderRespond(id){
     const cleanAns={};
     for(const c of survey.criteria){ cleanAns[c.id]=String(answers[c.id]).slice(0,60); }
     submit.disabled=true; submit.innerHTML='<span class="spin" style="width:16px;height:16px;border-width:2px"></span>';
+    let res;
     try{
-      await Store.addResponse(id,{name,score,answers:cleanAns});
+      res=await Store.addResponse(id,{name,score,answers:cleanAns});
     }catch(e){
       // Kayıt başarısız: sahte başarı gösterme, kullanıcı tekrar deneyebilsin
       submit.disabled=false; submit.textContent="Uyumumu hesapla";
       err.textContent="Cevabın kaydedilemedi. İnternetini kontrol edip tekrar dene.";
       err.style.display="block"; err.scrollIntoView({behavior:"smooth",block:"center"});
+      return;
+    }
+    if(res&&res.already){
+      // Bu kimlik ankete zaten katılmış (başka cihaz / temizlenmiş tarayıcı) →
+      // yeni kayıt oluşturma, eski sonucunu göster.
+      const ps=res.score!=null?res.score:score, pn=res.name||name;
+      try{ localStorage.setItem(alreadyKey,JSON.stringify({score:ps,name:pn})); }catch(e){}
+      app.innerHTML="";
+      app.appendChild(h(`<div class="top"><div class="eyebrow">${esc(survey.name)}</div></div>`));
+      showResult(ps,pn,true);
       return;
     }
     try{ localStorage.setItem(alreadyKey,JSON.stringify({score,name})); }catch(e){}
