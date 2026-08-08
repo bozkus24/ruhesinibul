@@ -53,6 +53,10 @@
     X-Frame-Options = "SAMEORIGIN"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+    # HTTPS zorunlu: tarayıcı 1 yıl boyunca siteyi yalnız HTTPS ile ister; ilk
+    # ziyaret sonrası SSL-strip / araya girme (MITM) saldırısını kapatır.
+    # includeSubDomains + preload: tüm alt alanlar dahil, HSTS preload listesine uygun.
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
     # Konservatif CSP: script/style/connect kısıtlanmıyor (AdSense/GA/Firebase/
     # reCAPTCHA çalışmaya devam etsin) ama eklenti/nesne (object) engelli,
     # <base> enjeksiyonu (base-uri) ve clickjacking (frame-ancestors) kapalı.

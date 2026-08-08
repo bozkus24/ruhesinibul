@@ -13,7 +13,7 @@ gtag("consent","default",{ad_storage:c,ad_user_data:c,ad_personalization:c,analy
 <title>Günün Sorusu · Kriterin</title>
 <link rel="canonical" href="https://kriterin.com/gunun-sorusu" />
 <meta name="theme-color" content="#e0405f" />
-<script>try{var t=localStorage.getItem('kriterin_tema');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>try{var t=localStorage.getItem('kriterin_tema');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Kriterin" />
 <meta property="og:locale" content="tr_TR" />
@@ -738,7 +738,7 @@ input[type=text]:focus{border-color:var(--accent)}
   import { initializeApp, getApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, where, getDocs, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   try {
     const firebaseConfig = {
       apiKey: "AIzaSyD_MIekQmU9wOtam8vrckMyhgjHKD_ZR9o",
@@ -768,23 +768,11 @@ input[type=text]:focus{border-color:var(--accent)}
       getMine: async () => { if(!cur) return null; const s = await getDoc(doc(db,'players',cur.uid)); return s.exists() ? s.data() : null; },
       setName: async (name) => { if(!cur) return; await setDoc(doc(db,'players',cur.uid), { name }, { merge:true }); },
       // İki yönlü senkron: istemci geçmişi birleştirip toplamları hesaplar, burası ham yazar
-      save: async (payload) => { if(!cur) return; await setDoc(doc(db,'players',cur.uid), Object.assign({updatedAt: serverTimestamp()}, payload), { merge:true }); },
-      _q: (type) => {
-        const col = collection(db,'players');
-        return (type==='tries')
-          ? query(col, where('eligible','==',true), orderBy('avgTries','asc'), limit(100))
-          : query(col, orderBy('bestStreak','desc'), limit(100));
-      },
-      _map: (type, qs) => {
-        const out = [];
-        qs.forEach(dd => { const x = dd.data(); out.push({ uid: dd.id, name: x.name, bestStreak: x.bestStreak||0, avgTries: x.avgTries, avgSolveMs: x.avgSolveMs }); });
-        // "En az tahmin"de eşit ortalamalar: daha kısa sürede bilen üstte (süre verisi olmayan sona)
-        if(type==='tries') out.sort((a,b)=>{ const t=(a.avgTries||0)-(b.avgTries||0); if(t)return t; return (a.avgSolveMs==null?Infinity:a.avgSolveMs)-(b.avgSolveMs==null?Infinity:b.avgSolveMs); });
-        return out;
-      },
-      board: async (type) => { const qs = await getDocs(window.KB._q(type)); return window.KB._map(type, qs); },
-      // Canlı dinleyici: kim güncellerse tüm cihazlarda tablo anında yenilenir (bayat değer kalmaz)
-      watch: (type, cb, err) => onSnapshot(window.KB._q(type), (qs) => cb(window.KB._map(type, qs)), (e) => { if(err) err(e); })
+      save: async (payload) => { if(!cur) return; await setDoc(doc(db,'players',cur.uid), Object.assign({updatedAt: serverTimestamp()}, payload), { merge:true }); }
+      // NOT: Liderlik tablosu artık /api/leaderboard (Netlify function, CDN önbellekli)
+      // üzerinden okunuyor; istemcinin players koleksiyonunu doğrudan okuduğu eski yol
+      // (_q/_map/board/watch) kaldırıldı. players okuması zaten yalnızca sahibine açık
+      // (gizlilik + kota koruması), bu yüzden o path işlevsizdi.
     };
     window.dispatchEvent(new CustomEvent('kb-ready'));
   } catch(e) { /* Firebase yüklenemezse oyun yine çalışır, leaderboard gizli kalır */ }
