@@ -10,8 +10,9 @@ window.dataLayer = window.dataLayer || [], gtag("js", new Date), gtag("config", 
 </script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Türkiye'de kaç kişinin kriterlerinize uyduğunu hemen öğrenin. Sonuçlar yaklaşık oranlardan tahmin edilir."><title>Kriterin, Aradığın kriterlere kaç kişi uyuyor?</title><meta name="author" content="Kriterin"><meta name="theme-color" content="#e0405f"><link rel="canonical" href="https://kriterin.com/hesaplayici.html"><script>
 try {
   var t = localStorage.getItem("kriterin_tema");
-  t && document.documentElement.setAttribute("data-theme", t)
-} catch (t) {}
+  if (!t) t = matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", t)
+} catch (e) {}
 </script><script type="application/ld+json">
 {
   "@context": "https://schema.org",
