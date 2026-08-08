@@ -12,27 +12,47 @@ service cloud.firestore {
       // okuma kotasını yakma vektörü). Kapatıldı.
       allow read: if request.auth != null && request.auth.uid == playerId;
 
-      // Yalnızca giriş yapmış kullanıcı KENDİ dokümanını yazar.
-      // Sayısal alanlar zorunlu sayı + makul aralık: string XSS payload'ı ve
-      // absürt "hile" değerleri (bestStreak:99999) yazımda reddedilir.
-      allow create, update: if request.auth != null
-        && request.auth.uid == playerId
-        && request.resource.data.name is string
-        && request.resource.data.name.size() <= 20
-        && (!('bestStreak' in request.resource.data)
-            || (request.resource.data.bestStreak is number
-                && request.resource.data.bestStreak >= 0
-                && request.resource.data.bestStreak <= 3650))
-        && (!('streak' in request.resource.data)
-            || (request.resource.data.streak is number
-                && request.resource.data.streak >= 0
-                && request.resource.data.streak <= 3650))
-        && (!('avgTries' in request.resource.data)
-            || (request.resource.data.avgTries is number
-                && request.resource.data.avgTries >= 1
-                && request.resource.data.avgTries <= 5))
-        && (!('eligible' in request.resource.data)
-            || request.resource.data.eligible is bool);
+      // ---- Alan doğrulama (tip + aralık). create ve update'te ortak. ----
+      // name zorunlu string; sayısal alanlar zorunlu sayı + makul aralık:
+      // string XSS payload'ı ve absürt değerler (bestStreak:99999) reddedilir.
+      // history bir map ve <=4000 gün (doküman şişirme / depolama kotası koruması).
+      function validPlayer(d) {
+        return d.name is string && d.name.size() <= 20
+          && (!('bestStreak' in d) || (d.bestStreak is number && d.bestStreak >= 0 && d.bestStreak <= 3650))
+          && (!('streak' in d)     || (d.streak is number     && d.streak >= 0     && d.streak <= 3650))
+          && (!('avgTries' in d)   || (d.avgTries is number   && d.avgTries >= 1    && d.avgTries <= 5))
+          && (!('eligible' in d)   || d.eligible is bool)
+          && (!('totalDays' in d)  || (d.totalDays is number  && d.totalDays >= 0   && d.totalDays <= 4000))
+          && (!('history' in d)    || (d.history is map       && d.history.size() <= 4000));
+      }
+
+      // ---- Tutarlılık (anti-hile). Stat alanları birbiriyle uyumlu olmalı. ----
+      // İstemci HER ZAMAN şunları sağlar (computeStats):
+      //   totalDays == history.size()  ·  bestStreak/streak <= totalDays
+      //   eligible == (totalDays >= 10)
+      // Böylece "hiç oynamadan bestStreak:3650, eligible:true" yazmak için artık
+      // 3650 girişli sahte bir history map'i kurmak gerekir (tek int yetmez).
+      // Tam koruma değil (Spark'ta sunucu-taraflı hesap yok) ama bariz hileyi zorlaştırır.
+      function statsConsistent(d) {
+        return (!('totalDays' in d)  || !('history' in d)   || d.totalDays == d.history.size())
+          && (!('bestStreak' in d)   || !('totalDays' in d) || d.bestStreak <= d.totalDays)
+          && (!('streak' in d)       || !('totalDays' in d) || d.streak <= d.totalDays)
+          && (!('eligible' in d)     || !('totalDays' in d) || d.eligible == (d.totalDays >= 10));
+      }
+
+      // create: yeni doküman — tüm alanlar yeni, tam tutarlılık uygulanır.
+      allow create: if request.auth != null && request.auth.uid == playerId
+        && validPlayer(request.resource.data)
+        && statsConsistent(request.resource.data);
+
+      // update: tutarlılık YALNIZCA stat alanları değişirken uygulanır. Böylece
+      // "İsmi düzenle" (yalnız name'i değiştiren merge write) tutarlılık kontrolüne
+      // TAKILMAZ — eski/efsanevi dokümanlarda bile isim düzenleme her zaman çalışır.
+      allow update: if request.auth != null && request.auth.uid == playerId
+        && validPlayer(request.resource.data)
+        && ( !request.resource.data.diff(resource.data).affectedKeys()
+               .hasAny(['totalDays', 'history', 'bestStreak', 'streak', 'eligible'])
+             || statsConsistent(request.resource.data) );
 
       allow delete: if false;
     }
