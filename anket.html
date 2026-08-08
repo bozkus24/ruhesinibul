@@ -483,11 +483,12 @@ function renderCreate(){
         <button type="button" class="trash" title="Anketi sil" aria-label="Anketi sil"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M6 7l1 12.2A2 2 0 0 0 9 21h6a2 2 0 0 0 2-1.8L18 7"/><path d="M10 11v6M14 11v6"/></svg></button>
       </div>`);
       row.querySelector(".trash").addEventListener("click",async function(){
-        if(!confirm(`"${m.name||"Anket"}" anketini silmek istediğine emin misin? Linki artık açılmaz, cevaplar erişilmez olur.`))return;
+        const sil=`"${m.name||"Anket"}" anketini silmek istediğine emin misin? Linki artık açılmaz, cevaplar erişilmez olur.`;
+        if(!(await ((window.KR&&KR.confirm)?KR.confirm(sil,{yes:"Evet, sil",no:"Vazgeç"}):Promise.resolve(confirm(sil)))))return;
         this.disabled=true;
         let ok=true;
         try{ await Store.deleteSurvey(mid); }catch(e){ ok=false; }
-        if(!ok){ this.disabled=false; alert("Silinemedi. Anketi silmek için, oluştururken kullandığın Google hesabıyla giriş yapmış olman gerekir."); return; }
+        if(!ok){ this.disabled=false; (window.KR&&KR.toast)?KR.toast("Silinemedi. Anketi silmek için, oluştururken kullandığın Google hesabıyla giriş yapmış olman gerekir.","err"):alert("Silinemedi. Anketi silmek için, oluştururken kullandığın Google hesabıyla giriş yapmış olman gerekir."); return; }
         myRemove(mid);
         row.remove();
         if(!rowsEl.children.length)card.remove();
@@ -526,7 +527,7 @@ function renderCreate(){
     </div>
   </div>`);
   app.appendChild(authCard);
-  authCard.querySelector("#gLogin").addEventListener("click",async()=>{ if(window.KR&&window.KR.inApp){window.KR.browserNotice();return;} try{await Store.signIn();}catch(e){alert("Giriş yapılamadı, tekrar dene.");} });
+  authCard.querySelector("#gLogin").addEventListener("click",async()=>{ if(window.KR&&window.KR.inApp){window.KR.browserNotice();return;} try{await Store.signIn();}catch(e){(window.KR&&KR.toast)?KR.toast("Giriş yapılamadı, tekrar dene.","err"):alert("Giriş yapılamadı, tekrar dene.");} });
   authCard.querySelector("#gLogout").addEventListener("click",(e)=>{ e.preventDefault(); Store.signOut(); });
   Store.onUser(u=>{
     if(!Store.canAuth()){ authCard.style.display="none"; return; }
@@ -1030,7 +1031,7 @@ async function renderResults(id){
   await load();
 }
 </script>
-<script src="/authnav.js?v=7" defer></script>
+<script src="/authnav.js?v=8" defer></script>
 <script src="/cerez.js" defer></script>
 </body>
 </html>
