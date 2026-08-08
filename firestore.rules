@@ -96,11 +96,15 @@ service cloud.firestore {
 
       // ===== Cevaplar (TAM GİZLİLİK) =====
       match /responses/{responseId} {
-        // Cevapları SADECE anketi oluşturan (owner) okuyabilir.
+        // Owner TÜM cevapları okur; katılımcı YALNIZCA kendi cevabını (doc id == uid).
+        // Self-read, "bu ankete zaten katıldın + eski sonucun" akışını mümkün kılar;
+        // başkasının cevabını göremez (gizlilik korunur).
         allow read: if request.auth != null
-          && get(/databases/$(database)/documents/surveys/$(surveyId)).data.owner == request.auth.uid;
+          && ( get(/databases/$(database)/documents/surveys/$(surveyId)).data.owner == request.auth.uid
+               || responseId == request.auth.uid );
         // Katılımcı cevap yazar. Kimlik ZORUNLU (anonim giriş yeterli): kimliksiz
         // toplu spam yazımı kapatıldı. App Check + alan doğrulama ikinci katman.
+        // (İstemci doc id'yi uid yapar → kişi başına tek cevap; update:false mükerreri keser.)
         allow create: if request.auth != null
           && request.resource.data.name is string
           && request.resource.data.name.size() <= 40
@@ -109,7 +113,7 @@ service cloud.firestore {
           && request.resource.data.score <= 100
           && request.resource.data.answers is map
           && request.resource.data.answers.size() <= 30;
-        // Cevap değiştirilemez / silinemez
+        // Cevap değiştirilemez / silinemez (kişi başına tek, kalıcı cevap)
         allow update, delete: if false;
       }
     }
