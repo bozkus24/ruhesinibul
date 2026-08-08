@@ -495,7 +495,7 @@ input[type=text]:focus{border-color:var(--accent)}
   }
   document.getElementById('shareBtn').addEventListener('click',function(){
     if(navigator.share){navigator.share({text:shareText()}).catch(function(){});}
-    else if(navigator.clipboard){navigator.clipboard.writeText(shareText());alert('Sonuç kopyalandı!');}
+    else if(navigator.clipboard){navigator.clipboard.writeText(shareText());(window.KR&&KR.toast)?KR.toast('Sonuç kopyalandı!','ok'):alert('Sonuç kopyalandı!');}
   });
 
   gecmistenKilitle();   // bu cihazda bugun zaten oynanmissa acilista kilitli gelsin
@@ -649,7 +649,7 @@ input[type=text]:focus{border-color:var(--accent)}
   window.addEventListener('kb-ready', loadBoards);
   window.addEventListener('kb-synced', loadBoards);  // oyun IIFE senkron edince tabloyu yenile
 
-  $('loginBtn').addEventListener('click', function(){ if(window.KR&&window.KR.inApp){window.KR.browserNotice();return;} if(window.KB&&KB.signIn) KB.signIn(); else alert('Giriş yalnızca canlı sitede çalışır.'); });
+  $('loginBtn').addEventListener('click', function(){ if(window.KR&&window.KR.inApp){window.KR.browserNotice();return;} if(window.KB&&KB.signIn) KB.signIn(); else (window.KR&&KR.toast)?KR.toast('Giriş yalnızca canlı sitede çalışır.','err'):alert('Giriş yalnızca canlı sitede çalışır.'); });
   $('logoutBtn').addEventListener('click', function(){ if(window.KB&&KB.signOut) KB.signOut(); });
 
   // İsteğe bağlı: Google adını beğenmeyen liderlik tablosu ismini düzenleyebilir
@@ -659,7 +659,7 @@ input[type=text]:focus{border-color:var(--accent)}
   });
   $('saveName').addEventListener('click', function(){
     var n=cleanName($('dispName').value);
-    if(!n){alert('Bu isim kullanılamaz, başka bir isim dene.');return;}
+    if(!n){(window.KR&&KR.toast)?KR.toast('Bu isim kullanılamaz, başka bir isim dene.','err'):alert('Bu isim kullanılamaz, başka bir isim dene.');return;}
     myName=n; $('meName').textContent=n; $('meAv').textContent=n.charAt(0).toUpperCase();
     // Bilerek seçilmiş ad: senkron sırasında Google adıyla ezilmemeli
     try{localStorage.setItem(LSn,n);localStorage.setItem('kriterin_nick_custom','1')}catch(e){}
@@ -764,7 +764,7 @@ input[type=text]:focus{border-color:var(--accent)}
       window.dispatchEvent(new CustomEvent('kb-auth', { detail: u ? { uid:u.uid, name:u.displayName, email:u.email } : null }));
     });
     window.KB = {
-      signIn: () => signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert('Giriş başarısız: ' + (e && e.message ? e.message : e))),
+      signIn: () => signInWithPopup(auth, new GoogleAuthProvider()).catch(e => (window.KR&&KR.toast)?KR.toast('Giriş başarısız: ' + (e && e.message ? e.message : e),'err'):alert('Giriş başarısız: ' + (e && e.message ? e.message : e))),
       signOut: () => signOut(auth),
       getMine: async () => { if(!cur) return null; const s = await getDoc(doc(db,'players',cur.uid)); return s.exists() ? s.data() : null; },
       setName: async (name) => { if(!cur) return; await setDoc(doc(db,'players',cur.uid), { name }, { merge:true }); },
@@ -788,7 +788,7 @@ input[type=text]:focus{border-color:var(--accent)}
     <a href="mailto:kriterincom@gmail.com" style="color:var(--muted);text-decoration:none">İletişim</a>
   </div>
 </footer>
-<script src="/authnav.js?v=7" defer></script>
+<script src="/authnav.js?v=8" defer></script>
 <script src="/cerez.js" data-ads defer></script>
 </body>
 </html>

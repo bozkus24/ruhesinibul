@@ -37,6 +37,65 @@
     });
   };
 
+  // ===== Ortak toast + onay modalı (tüm sayfalarda) =====
+  // Tarayıcının alert()/confirm() popup'ları yerine site temasıyla uyumlu,
+  // erişilebilir bileşenler. Tek kaynak burası; anket + günün sorusu bunları
+  // window.KR.toast / window.KR.confirm üzerinden çağırır (fallback: alert/confirm).
+  KR.toast = function(msg, type){
+    try{
+      if(!document.getElementById('kr-toast-css')){
+        var s=document.createElement('style'); s.id='kr-toast-css';
+        s.textContent='#kr-toast-wrap{position:fixed;left:0;right:0;bottom:22px;z-index:100001;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;padding:0 16px}'
+          +'.kr-toast{pointer-events:auto;max-width:420px;background:var(--ink,#231a20);color:var(--surface,#fff);font-size:14px;font-weight:600;line-height:1.4;padding:11px 16px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.28);opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;display:flex;align-items:center;gap:9px}'
+          +'.kr-toast.show{opacity:1;transform:none}'
+          +'.kr-toast.ok{background:#16794f;color:#fff}.kr-toast.err{background:#c0322b;color:#fff}'
+          +'.kr-toast .kri{flex:none;font-weight:800}';
+        document.head.appendChild(s);
+      }
+      var wrap=document.getElementById('kr-toast-wrap');
+      if(!wrap){ wrap=document.createElement('div'); wrap.id='kr-toast-wrap'; document.body.appendChild(wrap); }
+      var el=document.createElement('div'); el.className='kr-toast'+(type?(' '+type):'');
+      var icon=type==='ok'?'✓':type==='err'?'!':'';
+      if(icon){ var ic=document.createElement('span'); ic.className='kri'; ic.textContent=icon; el.appendChild(ic); }
+      var tx=document.createElement('span'); tx.textContent=msg; el.appendChild(tx);   // textContent: XSS yok
+      wrap.appendChild(el);
+      requestAnimationFrame(function(){ el.classList.add('show'); });
+      setTimeout(function(){ el.classList.remove('show'); setTimeout(function(){ el.remove(); }, 250); }, 2800);
+    }catch(e){ try{ alert(msg); }catch(_e){} }
+  };
+  // Söz döner: await KR.confirm(msg) -> true (onay) / false (vazgeç). opts:{yes,no}
+  KR.confirm = function(msg, opts){
+    opts = opts || {};
+    return new Promise(function(resolve){
+      try{
+        if(!document.getElementById('kr-confirm-css')){
+          var s=document.createElement('style'); s.id='kr-confirm-css';
+          s.textContent='.kr-confirm-ov{position:fixed;inset:0;z-index:100002;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.5)}'
+            +'.kr-confirm{max-width:360px;width:100%;background:var(--surface,#fff);color:var(--ink,#231a20);border:1px solid var(--line,#e8e0e1);border-radius:16px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.3)}'
+            +'.kr-confirm p{margin:0 0 16px;font-size:15px;line-height:1.5}'
+            +'.kr-confirm .kr-cf-btns{display:flex;gap:8px}'
+            +'.kr-confirm button{flex:1;cursor:pointer;font:inherit;font-weight:700;font-size:14px;padding:11px 14px;border-radius:10px;border:1px solid var(--line,#e8e0e1);background:var(--surface-2,#faf7f6);color:var(--ink,#231a20)}'
+            +'.kr-confirm button.kr-cf-yes{background:var(--accent,#e0405f);border-color:var(--accent,#e0405f);color:#fff}';
+          document.head.appendChild(s);
+        }
+        var ov=document.createElement('div'); ov.className='kr-confirm-ov';
+        var box=document.createElement('div'); box.className='kr-confirm';
+        box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true');
+        var p=document.createElement('p'); p.textContent=msg; box.appendChild(p);   // textContent: XSS yok
+        var btns=document.createElement('div'); btns.className='kr-cf-btns';
+        var no=document.createElement('button'); no.type='button'; no.textContent=opts.no||'Vazgeç';
+        var yes=document.createElement('button'); yes.type='button'; yes.className='kr-cf-yes'; yes.textContent=opts.yes||'Evet';
+        btns.appendChild(no); btns.appendChild(yes); box.appendChild(btns);
+        ov.appendChild(box); document.body.appendChild(ov);
+        function done(v){ ov.remove(); resolve(v); }
+        ov.addEventListener('click', function(e){ if(e.target===ov) done(false); });
+        no.addEventListener('click', function(){ done(false); });
+        yes.addEventListener('click', function(){ done(true); });
+        yes.focus();
+      }catch(e){ resolve(window.confirm(msg)); }
+    });
+  };
+
   var KEY='kriterin_user';
   var slot=document.getElementById('authNav');
   if(!slot) return;
@@ -191,7 +250,7 @@
           }
         });
       });
-    }).catch(function(err){ if(err && err.code!=='auth/popup-closed-by-user') alert('Giriş yapılamadı: '+(err&&err.message?err.message:err)); });
+    }).catch(function(err){ if(err && err.code!=='auth/popup-closed-by-user') KR.toast('Giriş yapılamadı: '+(err&&err.message?err.message:err), 'err'); });
   }
   function onLogout(e){
     e.preventDefault();
@@ -205,7 +264,7 @@
     if(e){ e.preventDefault(); e.stopPropagation(); }
     var inp=slot.querySelector('.an-input'); if(!inp) return;
     var n=cleanName(inp.value);
-    if(!n){ alert('Bu isim kullanılamaz, başka bir isim dene.'); inp.focus(); return; }
+    if(!n){ KR.toast('Bu isim kullanılamaz, başka bir isim dene.', 'err'); inp.focus(); return; }
     var u=getU()||{}; u.name=n; setU(u);
     try{ localStorage.setItem('kriterin_nick', n); localStorage.setItem('kriterin_nick_custom','1'); }catch(_e){}
     var hn=document.getElementById('hiNick'); if(hn) hn.textContent=n;   // oyun sayfasındaysa selamlama da güncellensin
