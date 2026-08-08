@@ -122,6 +122,7 @@ def page(slug, title, desc, body, crumb=None, related=None,
 <meta property="og:description" content="{_esc(desc)}" />
 <meta property="og:image" content="https://kriterin.com/og-v2.png" />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://kriterin.com/og-v2.png" />
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
