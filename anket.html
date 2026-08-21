@@ -334,6 +334,24 @@ const Store=(function(){
       const d=lsGet("kriterin_anket_"+id);
       return d&&d.responses?d.responses.slice().sort((a,b)=>b.score-a.score):[];
     },
+    // Anonim demografi yaz: katılımcının kendi girdiği yaş + cinsiyet, KİMLİĞE
+    // BAĞLANMADAN toplu istatistik için 'stats' koleksiyonuna. addDoc → oto id
+    // (uid yok). Kimlik yalnızca App Check + auth ile spam'i keser; saklanan
+    // satırda uid/isim/IP TUTULMAZ. İstatistik yazımı kritik değildir; hata
+    // ana cevap akışını BOZMAZ (sessizce yutulur).
+    async addStat(surveyId,age,gender){
+      await initP;
+      if(!ready) return;                 // çevrimdışı/önizleme: istatistik yok
+      try{
+        const u=await ensureAuth();      // yalnız yazım kapısı; uid saklanmaz
+        if(!u) return;
+        const a=Math.round(Number(age));
+        if(!(a>=18&&a<=99)) return;
+        if(gender!=='k'&&gender!=='e'&&gender!=='x') return;
+        const {collection,addDoc}=fs;
+        await addDoc(collection(db,"stats"),{age:a,gender:gender,surveyId:String(surveyId||"").slice(0,40),createdAt:Date.now()});
+      }catch(e){}
+    },
     // Girişte: sahipsiz eski anketi (bu cihazdan bilinen) hesabına bağla
     async claimOwner(id){
       await initP; if(!ready||id.startsWith("loc_"))return false;
@@ -850,6 +868,30 @@ async function renderRespond(id){
   </div></div>`);
   app.appendChild(nameCard);
 
+  // Anonim demografi: yaş (kesin, 18-99) + cinsiyet. Kimliğe bağlanmaz; yalnızca
+  // toplu istatistik için. Katılım için zorunlu (min 18). "Belirtmek istemiyorum"
+  // geçerli bir cinsiyet seçimidir.
+  const demo={gender:null};
+  const demoCard=h(`<div class="card"><div class="field" style="margin:0">
+    <label for="rage">Yaşın</label>
+    <input class="inp num" id="rage" type="number" inputmode="numeric" min="18" max="99" placeholder="Örn: 27" style="max-width:140px">
+    <div class="subtle" style="margin-top:12px">Cinsiyetin</div>
+    <div class="opts" data-gender>
+      <button type="button" class="opt" data-g="k">Kadın</button>
+      <button type="button" class="opt" data-g="e">Erkek</button>
+      <button type="button" class="opt" data-g="x">Belirtmek istemiyorum</button>
+    </div>
+    <p class="hint" style="margin-top:8px">Bu bilgi <b>anonim</b> toplanır, kimliğinle ilişkilendirilmez; yalnızca toplu istatistik içindir. Ayrıntı: <a href="/gizlilik-politikasi.html">Gizlilik Politikası</a>.</p>
+  </div></div>`);
+  demoCard.querySelectorAll("[data-gender] .opt").forEach(b=>{
+    b.addEventListener("click",()=>{
+      demo.gender=b.getAttribute("data-g");
+      demoCard.querySelectorAll("[data-gender] .opt").forEach(x=>x.classList.remove("sel"));
+      b.classList.add("sel");
+    });
+  });
+  app.appendChild(demoCard);
+
   const answers={};
   const form=h(`<div></div>`);
   survey.criteria.forEach(c=>form.appendChild(buildRespondField(c,answers)));
@@ -869,6 +911,15 @@ async function renderRespond(id){
       }
     }
     if(!name){ err.textContent="Takma adını yaz."; err.style.display="block"; return; }
+    const ageVal=parseInt(demoCard.querySelector("#rage").value,10);
+    if(!(ageVal>=18&&ageVal<=99)){
+      err.textContent="Yaşını gir (18-99)."; err.style.display="block";
+      demoCard.scrollIntoView({behavior:"smooth",block:"center"}); return;
+    }
+    if(!demo.gender){
+      err.textContent="Cinsiyetini seç."; err.style.display="block";
+      demoCard.scrollIntoView({behavior:"smooth",block:"center"}); return;
+    }
     const {score}=computeScore(survey,answers);
     // Cevaplar da kaydedilir, kurucu sonuçlar sayfasında görebilsin
     const cleanAns={};
@@ -895,6 +946,9 @@ async function renderRespond(id){
       return;
     }
     try{ localStorage.setItem(alreadyKey,JSON.stringify({score,name})); }catch(e){}
+    // Yalnız YENİ (mükerrer olmayan) katılımda anonim demografi yaz. Kimliğe
+    // bağlanmaz; hata olsa da sonucu göstermeyi engellemez (fire-and-forget).
+    Store.addStat(id,ageVal,demo.gender);
     app.innerHTML="";
     app.appendChild(h(`<div class="top"><div class="eyebrow">${esc(survey.name)}</div></div>`));
     showResult(score,name,false);
