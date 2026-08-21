@@ -42,6 +42,7 @@ PAGES = [
     ("/iq-dagilimi-nasil-okunur.html",    "iq-dagilimi-nasil-okunur.html",     "monthly", "0.8"),
     ("/taraftarlik-cografyasi.html",      "taraftarlik-cografyasi.html",       "monthly", "0.8"),
     ("/hakkimizda.html",                  "hakkimizda.html",                   "yearly",  "0.5"),
+    ("/iletisim.html",                    "iletisim.html",                     "yearly",  "0.5"),
     ("/gizlilik-politikasi.html",         "gizlilik-politikasi.html",          "yearly",  "0.3"),
     ("/cerez-politikasi.html",            "cerez-politikasi.html",             "yearly",  "0.3"),
     ("/kullanim-kosullari.html",          "kullanim-kosullari.html",           "yearly",  "0.3"),
