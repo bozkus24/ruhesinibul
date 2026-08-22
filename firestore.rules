@@ -152,7 +152,7 @@ service cloud.firestore {
       // İstemci okuması KAPALI; veri yalnız site sahibince toplu incelenir.
       allow read: if false;
 
-      // hasOnly ile SADECE bu 4 alan; kimlik alanı enjekte edilemez.
+      // hasOnly ile SADECE bu 6 alan; kimlik alanı enjekte edilemez.
       // criteria: kriter kodlarından oluşan map (istemci serializeCriteria).
       allow create: if request.auth != null
         && request.resource.data.keys().hasOnly(['age', 'gender', 'resultCount', 'aktifKriterSayisi', 'criteria', 'createdAt'])
