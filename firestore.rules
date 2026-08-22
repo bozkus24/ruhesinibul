@@ -135,9 +135,38 @@ service cloud.firestore {
         && request.resource.data.age is int
         && request.resource.data.age >= 18
         && request.resource.data.age <= 99
-        && request.resource.data.gender in ['k', 'e', 'x']
+        && request.resource.data.gender in ['k', 'e']
         && request.resource.data.surveyId is string
         && request.resource.data.surveyId.size() <= 40
+        && request.resource.data.createdAt is number;
+
+      // Değiştirilemez / silinemez (yalnız ekleme).
+      allow update, delete: if false;
+    }
+
+    // ===== Anonim hesaplayıcı istatistiği ("Sonucu öğren" tıklamasında) =====
+    // Hesaplayıcıda kullanıcının kendi girdiği yaş + cinsiyet ve o an seçili
+    // kriterler, KİMLİĞE BAĞLANMADAN toplu istatistik için buraya yazılır.
+    // addDoc -> oto id; uid yol/alanında YOK. stats ile aynı gizlilik modeli.
+    match /hesap_stats/{statId} {
+      // İstemci okuması KAPALI; veri yalnız site sahibince toplu incelenir.
+      allow read: if false;
+
+      // hasOnly ile SADECE bu 4 alan; kimlik alanı enjekte edilemez.
+      // criteria: kriter kodlarından oluşan map (istemci serializeCriteria).
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['age', 'gender', 'resultCount', 'aktifKriterSayisi', 'criteria', 'createdAt'])
+        && request.resource.data.age is int
+        && request.resource.data.age >= 18
+        && request.resource.data.age <= 99
+        && request.resource.data.gender in ['k', 'e']
+        && request.resource.data.resultCount is int
+        && request.resource.data.resultCount >= 0
+        && request.resource.data.aktifKriterSayisi is int
+        && request.resource.data.aktifKriterSayisi >= 0
+        && request.resource.data.aktifKriterSayisi <= 30
+        && request.resource.data.criteria is map
+        && request.resource.data.criteria.size() <= 30
         && request.resource.data.createdAt is number;
 
       // Değiştirilemez / silinemez (yalnız ekleme).

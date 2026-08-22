@@ -347,7 +347,7 @@ const Store=(function(){
         if(!u) return;
         const a=Math.round(Number(age));
         if(!(a>=18&&a<=99)) return;
-        if(gender!=='k'&&gender!=='e'&&gender!=='x') return;
+        if(gender!=='k'&&gender!=='e') return;
         const {collection,addDoc}=fs;
         await addDoc(collection(db,"stats"),{age:a,gender:gender,surveyId:String(surveyId||"").slice(0,40),createdAt:Date.now()});
       }catch(e){}
@@ -869,8 +869,7 @@ async function renderRespond(id){
   app.appendChild(nameCard);
 
   // Anonim demografi: yaş (kesin, 18-99) + cinsiyet. Kimliğe bağlanmaz; yalnızca
-  // toplu istatistik için. Katılım için zorunlu (min 18). "Belirtmek istemiyorum"
-  // geçerli bir cinsiyet seçimidir.
+  // toplu istatistik için. Katılım için zorunlu (min 18); cinsiyet Kadın/Erkek.
   const demo={gender:null};
   const demoCard=h(`<div class="card"><div class="field" style="margin:0">
     <label for="rage">Yaşın</label>
@@ -879,7 +878,6 @@ async function renderRespond(id){
     <div class="opts" data-gender>
       <button type="button" class="opt" data-g="k">Kadın</button>
       <button type="button" class="opt" data-g="e">Erkek</button>
-      <button type="button" class="opt" data-g="x">Belirtmek istemiyorum</button>
     </div>
     <p class="hint" style="margin-top:8px">Bu bilgi <b>anonim</b> toplanır, kimliğinle ilişkilendirilmez; yalnızca toplu istatistik içindir. Ayrıntı: <a href="/gizlilik-politikasi.html">Gizlilik Politikası</a>.</p>
   </div></div>`);
