@@ -7,15 +7,17 @@ Sonraki oturum için devir notu. Sabit proje kuralları için `CLAUDE.md`'ye bak
 - Site içeriğinde uzun çizgi (— / –) yok. Uydurma istatistik yok (sadece mevcut külliyattaki sayılar).
 - Dal: `claude/blissful-rubin-apcac3`. Netlify `main`'den deploy eder.
 
-## Bekleyen COMMIT'siz değişiklikler (28 dosya — tek commit + tek deploy'a hazır)
-Kullanıcı "commit et" deyince tek seferde canlıya alınacak:
-- `anket.html` — karanlık mod beyaz flaş (FOUC) düzeltmesi: `<head>`'e senkron tema script'i (prefers-color-scheme fallback'li) + footer İletişim linki.
-- `iletisim.html` — **YENİ** İletişim sayfası (hakkimizda.html şablonundan). ContactPage JSON-LD, e-posta kriterincom@gmail.com, sosyal linkler. "daha hızlı dönüş yaparız" baloncuğu KALDIRILDI. "Genellikle birkaç iş günü içinde yanıt veriyoruz." satırı DURUYOR (kullanıcı çıkarma demedi).
-- 26 HTML — footer'a `/iletisim.html` linki (2 desen: mailto→link değişimi + Çerez tercihleri öncesine ekleme).
-- `site/gen.py` — FOOT sabitine İletişim linki.
-- `scripts/gen_sitemap.py` + `sitemap.xml` — iletisim.html eklendi (27 URL).
-- `CLAUDE.md`, `HANDOFF.md` — bu oturumda eklendi.
-- Smoke test GEÇİYOR.
+## Bekleyen COMMIT'siz değişiklikler (hesaplayıcı anonim demografi — kullanıcı "commit et" deyince)
+- `hesaplayici.html` — YENİ akış: (1) kriterlerden ÖNCE "Önce seni tanıyalım" kartı (yaş 18-99 sayı input + cinsiyet Kadın/Erkek/Belirtmek istemiyorum chip'leri), (2) sonuç `body.res-locked` ile "Sonucu öğren" butonuna kadar GİZLİ (minibar dahil), (3) butona basınca doğrulama + sonuç açılır (sonrası canlı güncellenmeye devam eder) + `hesap_stats`'a tek anonim satır: `{age, gender, criteria(map: 16 grup + boy/yasAraligi/iq aralıkları), createdAt}` (uid YOK, addDoc oto id, sayfa başına tek yazım, fire-and-forget). SSS "Girdiğim bilgiler kaydediliyor mu?" metni güncellendi.
+- `firestore.rules` — `hesap_stats/{id}`: read:false, create hasOnly(['age','gender','criteria','createdAt']) + tip/aralık, update/delete:false. **Firebase'e AYRICA deploy gerekir!**
+- `gizlilik-politikasi.html` — özet kutusu + madde 1 yeniden yazıldı ("hiçbir zaman gönderilmez" vaadi kaldırıldı, anonim istatistik aydınlatması), saklama süresi, tarih 22 Ağustos 2026.
+- Smoke GEÇİYOR; Playwright doğrulaması: kilit/doğrulama/açılma/serileştirme OK (19 anahtar).
+
+## Canlıda (main'e merge edildi, kullanıcı onayıyla)
+- Anket anonim demografi (yaş+cinsiyet → `stats`), İletişim sayfası + FOUC düzeltmesi, AdSense içerik işi. **Kullanıcı `firestore.rules`'u Firebase'e henüz deploy ETMEDİ** (edene kadar stats yazımları reddedilir; kullanıcı "halledince yazacağım" dedi).
+- Önizleme artifact'i: https://claude.ai/code/artifact/3d5143c2-b5b2-4135-a7f8-e4ea1d64b37b
+
+## Standing kural (kullanıcı, 22 Ağu): ben söylemeden HİÇBİR ŞEY Netlify'a deploy edilmeyecek (main'e merge/push dahil).
 
 ## Tamamlanan işler (canlıda, merged)
 - **AdSense "düşük değerli içerik" reddi giderme** (PR #57, main): 9→17 makale (8 yeni, qualitative, em-dash'siz), 14 sayfaya içerik, index.html trust paragrafı, IQ uyarı kutusu, hakkimizda + iletisim + yasal sayfalar. İçerik ~5.500→~14.000 kelime.
